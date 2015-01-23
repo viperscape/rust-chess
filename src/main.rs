@@ -17,38 +17,75 @@ fn abs (v: usize) -> usize { //wtf happened to std abs? also change to u8 soon
     } 
     else {v as usize}
 }
+fn abs_pos (from:Position,to:Position) -> (usize,usize) {
+    let r = abs(to.0 - from.0);
+    let c = abs(to.1 - from.1);
+    (r,c)
+}
 
 impl Item {
-    fn play_rook (&self, from:Position, to:Position) -> bool {
+    fn rook_logic (&self, from:Position, to:Position) -> bool {
         if to.0 == from.0 ||
             to.1 == from.1 {true}
         else {false}
     }
-    fn play_king (&self, from:Position, to:Position) -> bool {
-        if abs(to.0 - from.0) < 2 &&
-            abs(to.1 - from.1) < 2 {true}
+
+    fn king_logic (&self, from:Position, to:Position) -> bool {
+        let (r,c) = abs_pos(from,to);
+        if r < 2 &&
+            r < 2 {true}
         else {false}
     }
-    fn play_bishop (&self, from:Position, to:Position) -> bool {
-        true
+
+    fn bishop_logic (&self, from:Position, to:Position) -> bool {
+        let (r,c) = abs_pos(from,to);
+        if r == c {true}
+        else {false}
     }
-    
+
+    fn pawn_logic (&self, from:Position, to:Position, inverted:bool) -> bool {
+        let (r,c) = abs_pos(from,to);
+        if !inverted {
+            if to.0 - from.0 == 1 &&
+                c == 1 {true}  // diagonally on capture
+            else if to.0 - from.0 < 3 &&
+                c == 0 {true} //forward, 1 or 2 spaces (first move)
+            else {false}
+        }
+        else { //black is playing
+            if from.0 - to.0 == 1 &&
+                c == 1 {true}  // diagonally on capture
+            else if from.0 - to.0 < 3 &&
+                c == 0 {true} //forward, 1 or 2 spaces (first move)
+            else {false}
+        }
+    }
+
+    fn knight_logic (&self, from:Position, to:Position) -> bool {
+        let (r,c) = abs_pos(from,to);
+
+        if r < 1 || c < 1 ||
+            r > 2 || c > 2 {false}
+        else { 
+            if r == 2 && c == 1 {true}
+            else if r == 1 && c == 2 {true}
+            else {false}
+        }
+    }
+
     fn play_isvalid (&self, from:Position, to:Position, inverted:bool) -> bool {
         match *self {
-            Item::Pawn => { 
-                if to.0 - from.0 == 1 &&
-                    to.1 - from.1 == 1 {true}
+            Item::Pawn => self.pawn_logic(from,to,inverted),
+            Item::King => self.king_logic(from,to),
+            Item::Queen => { // queen is in essence rook, bishop, and king combined
+                if self.rook_logic(from,to) ||
+                    self.bishop_logic(from,to) ||
+                    self.king_logic(from,to) {true}
                 else {false}
             },
-            Item::King => self.play_king(from,to),
-            Item::Queen => {
-                if self.play_rook(from,to) ||
-                    self.play_bishop(from,to) ||
-                    self.play_king(from,to) {true}
-                else {false}},
-            Item::Rook =>  self.play_rook(from,to),
-            Item::Knight => {true},
-            Item::Bishop => self.play_bishop(from,to),
+            Item::Rook =>  self.rook_logic(from,to),
+            Item::Knight => self.knight_logic(from,to),
+            Item::Bishop => self.bishop_logic(from,to),
         }
     }
 }
