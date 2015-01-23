@@ -19,6 +19,20 @@ fn abs (v: usize) -> usize { //wtf happened to std abs? also change to u8 soon
 }
 
 impl Item {
+    fn play_rook (&self, from:Position, to:Position) -> bool {
+        if to.0 == from.0 ||
+            to.1 == from.1 {true}
+        else {false}
+    }
+    fn play_king (&self, from:Position, to:Position) -> bool {
+        if abs(to.0 - from.0) < 2 &&
+            abs(to.1 - from.1) < 2 {true}
+        else {false}
+    }
+    fn play_bishop (&self, from:Position, to:Position) -> bool {
+        true
+    }
+    
     fn play_isvalid (&self, from:Position, to:Position, inverted:bool) -> bool {
         match *self {
             Item::Pawn => { 
@@ -26,15 +40,15 @@ impl Item {
                     to.1 - from.1 == 1 {true}
                 else {false}
             },
-            Item::King => {
-                if abs(to.0 - from.0) < 2 &&
-                    abs(to.1 - from.1) < 2 {true}
-                else {false}
-            },
-            Item::Queen => {true},
-            Item::Rook => {true},
+            Item::King => self.play_king(from,to),
+            Item::Queen => {
+                if self.play_rook(from,to) ||
+                    self.play_bishop(from,to) ||
+                    self.play_king(from,to) {true}
+                else {false}},
+            Item::Rook =>  self.play_rook(from,to),
             Item::Knight => {true},
-            Item::Bishop => {true},
+            Item::Bishop => self.play_bishop(from,to),
         }
     }
 }
@@ -58,9 +72,6 @@ impl Player {
 
 
 type BoardLayout = [[Option<Player>;8];8];
-
-//#[derive(Show)]
-//struct Board(BoardLayout);
 
 #[derive(Show)]
 struct Game {
@@ -113,5 +124,5 @@ impl Game {
 fn main() {
     let mut game = Game::new();
    // println!("{:?}",game);
-    println!("{}",game.play((0,4),(3,3)));
+    println!("{}",game.play((0,0),(3,0)));
 }
