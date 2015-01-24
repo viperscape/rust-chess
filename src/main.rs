@@ -144,6 +144,7 @@ type BoardLayout = [[Option<Player>;8];8];
 struct Game {
     board: BoardLayout,
     captured: Vec<Player>,
+    active: Player, //use a fake piece to set who is current active player
 }
 
 impl Game {
@@ -172,7 +173,7 @@ impl Game {
                     Some(Player::Black(Item::Bishop)),
                     Some(Player::Black(Item::Knight)),
                     Some(Player::Black(Item::Rook))];
-        Game { board:board, captured:Vec::new() }
+        Game { board:board, captured:Vec::new(), active: Player::White(Item::Pawn) }
     }
 
     fn get_player (&self,at:Position) -> &Option<Player> {
@@ -195,6 +196,12 @@ impl Game {
         println!("{:?}",self.get_player(to));
 
         if let &Some(p) = self.get_player(from) { 
+            match (p,self.active) {
+                (Player::White(_),Player::Black(_)) | 
+                    (Player::Black(_),Player::White(_)) => return false,
+                _ => (),
+            }
+
             let capturing = self.capturing(from,to);
             if p.play_isvalid(from,to, capturing) {
                 if let Some(_p) = self.swap_pos(to,Some(p)) {
@@ -224,6 +231,6 @@ impl Game {
 
 fn main() {
     let mut game = Game::new();
-    println!("valid move? {}",game.play((0,0),(3,0)));
+    println!("valid move? {}",game.play((7,0),(0,0)));
     println!("{:?}",game);
 }
