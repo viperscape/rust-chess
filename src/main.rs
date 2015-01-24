@@ -112,9 +112,6 @@ enum Player {
 }
 
 impl Player {
-
-    
-
     /// check play logic for valid moves
     fn play_isvalid (&self, from: Position , to: Position, capturing: bool) -> bool {
         match *self {
@@ -183,7 +180,7 @@ impl Game {
     }
 
     /// swap out destination, and return it
-    fn set_pos (&mut self,at:Position, p:Option<Player>) -> Option<Player> {
+    fn swap_pos (&mut self,at:Position, p:Option<Player>) -> Option<Player> {
         let oldp;
         if let &Some(_p) = self.get_player(at) {
             oldp = Some(_p);
@@ -200,11 +197,11 @@ impl Game {
         if let &Some(p) = self.get_player(from) { 
             let capturing = self.capturing(from,to);
             if p.play_isvalid(from,to, capturing) {
-                if let Some(_p) = self.set_pos(to,Some(p)) {
+                if let Some(_p) = self.swap_pos(to,Some(p)) {
                     println!("captured{:?}",_p);
                     self.captured.push(_p);
                 }
-                self.set_pos(from,None);
+                self.swap_pos(from,None);
                 true
             }
             else {false}
