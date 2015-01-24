@@ -31,7 +31,7 @@ impl Item {
     }
 
     fn king_logic (&self, from:Position, to:Position) -> bool {
-        let (r,c) = abs_pos(from,to);
+        let (r,_) = abs_pos(from,to);
         if r < 2 &&
             r < 2 {true}
         else {false}
@@ -43,22 +43,35 @@ impl Item {
         else {false}
     }
 
-    fn pawn_logic (&self, from:Position, to:Position, inverted:bool) -> bool {
-        let (r,c) = abs_pos(from,to);
+    /// returns valid move, plus if it is a capturing move
+    fn pawn_logic (&self, from:Position, to:Position, inverted:bool) -> (bool,bool) {
+        let (_,c) = abs_pos(from,to);
         if !inverted {
             if to.0 - from.0 == 1 &&
-                c == 1 {true}  // diagonally on capture
+                c == 1 {(true,true)}  // diagonally on capture
             else if to.0 - from.0 < 3 &&
-                c == 0 {true} //forward, 1 or 2 spaces (first move)
-            else {false}
+                c == 0 {(true,false)} //forward, 1 or 2 spaces (first move)
+            else {(false,false)}
         }
         else { //black is playing
             if from.0 - to.0 == 1 &&
-                c == 1 {true}  // diagonally on capture
+                c == 1 {(true,true)}  // diagonally on capture
             else if from.0 - to.0 < 3 &&
-                c == 0 {true} //forward, 1 or 2 spaces (first move)
-            else {false}
+                c == 0 {(true,false)} //forward, 1 or 2 spaces (first move)
+            else {(false,false)}
         }
+    }
+
+    //todo: rename fn & also consider 'en passant' move within here?
+    //note: en passant requires previous moves, or boardlayout
+    fn pawn_islegal (&self, res: (bool,bool), capturing: bool) -> bool {
+        if res.0 { //partially valid move? now determine if capture is valid
+            if res.1 && capturing {true}
+            else if !res.1 && !capturing {true} //nothing in way?
+            //else if !res.1 && capturing {false} //not a diagonal move, and blocked
+            else {false} //should cover any other case
+        }
+        else {false}
     }
 
     fn knight_logic (&self, from:Position, to:Position) -> bool {
@@ -73,10 +86,11 @@ impl Item {
         }
     }
 
-    fn play_isvalid (&self, from:Position, to:Position, inverted:bool) -> bool {
+    //todo: workout if through to destination is valid (no blocking pieces!)
+    fn play_isvalid (&self, from:Position, to:Position) -> bool {
+        if from == to {return false}
         match *self {
-            Item::Pawn => self.pawn_logic(from,to,inverted),
-            Item::King => self.king_logic(from,to),
+            Item::King => self.king_logic(from,to), //todo: check for incidental checks when moving king, illegal
             Item::Queen => { // queen is in essence rook, bishop, and king combined
                 if self.rook_logic(from,to) ||
                     self.bishop_logic(from,to) ||
@@ -86,6 +100,7 @@ impl Item {
             Item::Rook =>  self.rook_logic(from,to),
             Item::Knight => self.knight_logic(from,to),
             Item::Bishop => self.bishop_logic(from,to),
+            _ => false,
         }
     }
 }
@@ -98,11 +113,29 @@ enum Player {
 
 impl Player {
 
+    
+
     /// check play logic for valid moves
-    fn play_isvalid (&self, from: Position , to: Position) -> bool {
+    fn play_isvalid (&self, from: Position , to: Position, capturing: bool) -> bool {
         match *self {
-            Player::Black(item) => item.play_isvalid(from,to,true),
-            Player::White(item) => item.play_isvalid(from,to,false),
+            Player::Black(item) => {
+                match item {
+                    Item::Pawn => { //pawn logic is special
+                        let res = item.pawn_logic(from,to,true);
+                        item.pawn_islegal(res,capturing)
+                    },
+                    _ => item.play_isvalid(from,to),
+                }
+            }
+            Player::White(item) => {
+                match item {
+                    Item::Pawn => {
+                        let res = item.pawn_logic(from,to,false);
+                        item.pawn_islegal(res,capturing)
+                    },
+                    _ => item.play_isvalid(from,to),
+                }
+            }
         }
     }
 }
@@ -149,17 +182,51 @@ impl Game {
         &self.board[at.0][at.1]
     }
 
-    fn play(&mut self, from:Position,to:Position)-> bool {
+    /// swap out destination, and return it
+    fn set_pos (&mut self,at:Position, p:Option<Player>) -> Option<Player> {
+        let oldp;
+        if let &Some(_p) = self.get_player(at) {
+            oldp = Some(_p);
+        }
+        else {oldp=None;}
+        self.board[at.0][at.1] = p;
+        oldp
+    }
+
+    fn play(&mut self, from:Position,to:Position) -> bool {
         println!("{:?}",self.get_player(from));
         println!("{:?}",self.get_player(to));
 
-        if let &Some(p) = self.get_player(from) { p.play_isvalid(from,to) }
+        if let &Some(p) = self.get_player(from) { 
+            let capturing = self.capturing(from,to);
+            if p.play_isvalid(from,to, capturing) {
+                if let Some(_p) = self.set_pos(to,Some(p)) {
+                    println!("captured{:?}",_p);
+                    self.captured.push(_p);
+                }
+                self.set_pos(from,None);
+                true
+            }
+            else {false}
+        }
         else {false}
+    }
+
+    fn capturing (&self, from: Position, to: Position) -> bool {
+        if let &Some(p) = self.get_player(to) {
+            let res = match (p,self.get_player(from).unwrap()) {
+                (Player::Black(_),Player::White(_)) => true,
+                (Player::White(_),Player::Black(_)) => true,
+                _ => false,
+            };
+            return res
+        }
+        false
     }
 }
 
 fn main() {
     let mut game = Game::new();
-   // println!("{:?}",game);
-    println!("{}",game.play((0,0),(3,0)));
+    println!("valid move? {}",game.play((0,0),(3,0)));
+    println!("{:?}",game);
 }
