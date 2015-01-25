@@ -250,15 +250,17 @@ impl Game {
             //current active player is playing?
             match (player,self.active) {
                 (Player::White(_),Player::Black(_)) | 
-                    (Player::Black(_),Player::White(_)) => return false,
+                (Player::Black(_),Player::White(_)) => return false,
                 _ => (),
             }
             
             //only capturing other players pieces?
-            match (self.active,player) {
-                (Player::White(_),Player::Black(_)) | 
-                (Player::Black(_),Player::White(_)) => return false,
-                _ => (),
+            if let &Some(oppo) =  self.get_player(to) {
+                match (player, oppo) {
+                    (Player::White(_),Player::White(_)) | 
+                    (Player::Black(_),Player::Black(_)) => return false,
+                    _ => (),
+                }
             }
 
 
