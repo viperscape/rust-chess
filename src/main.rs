@@ -103,6 +103,49 @@ impl Item {
             _ => false,
         }
     }
+
+    fn queen_path (&self, from:Position, to:Position) -> Option<Vec<Position>> {
+        if self.rook_logic(from,to) { self.rook_path(from,to) }
+        else if self.bishop_logic(from,to) { self.bishop_path(from,to) }
+        else {Some(vec!(to))}
+    }
+
+    fn rook_path (&self, from:Position, to:Position) -> Option<Vec<Position>> {
+        let mut v = Vec::new();
+
+        // heading down row or column?
+        if from.0 != to.0 {
+            for n in range(from.0,to.0) { v.push((n,from.1)) }
+        }
+        else {
+            for n in range(from.1,to.1) { v.push((from.0,n)) }
+        }
+
+        Some(v)
+    }
+
+    fn bishop_path (&self, from:Position, to:Position) -> Option<Vec<Position>> {
+        let mut v = Vec::new();
+        let mut m = from.1;
+
+        for n in range(from.0,to.0) {
+            if from.1 > to.1 { m-=1; }
+            else { m+=1; }
+            v.push((n,m));
+        }
+
+        Some(v)
+    }
+
+    /// gets play path, to be checked later for if legal
+    fn play_path (&self, from:Position, to:Position) -> Option<Vec<Position>> {
+        match *self {
+            Item::Queen => self.queen_path(from,to),
+            Item::Rook =>  self.rook_path(from,to),
+            Item::Bishop => self.bishop_path(from,to),
+            _ => Some(vec!(to)), //single space destination
+        }
+    }
 }
 
 #[derive(Show,Copy)]
@@ -205,7 +248,7 @@ impl Game {
             let capturing = self.capturing(from,to);
             if p.play_isvalid(from,to, capturing) {
                 if let Some(_p) = self.swap_pos(to,Some(p)) {
-                    println!("captured{:?}",_p);
+                    println!("captured {:?}",_p);
                     self.captured.push(_p);
                 }
                 self.swap_pos(from,None);
@@ -231,6 +274,6 @@ impl Game {
 
 fn main() {
     let mut game = Game::new();
-    println!("valid move? {}",game.play((7,0),(0,0)));
+    println!("valid move? {}",game.play((0,0),(7,0)));
     println!("{:?}",game);
 }
