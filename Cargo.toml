@@ -3,3 +3,9 @@
 name = "rust-chess"
 version = "0.0.1"
 authors = ["Chris Gill <chrisfgill@gmail.com>"]
+
+repository = "https://github.com/viperscape/rust-chess/"
+keywords = ["chess", "game"]
+
+license = "MIT"
+description = "The Game of Chess, in Rust"
