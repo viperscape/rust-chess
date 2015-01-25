@@ -104,13 +104,13 @@ impl Item {
         }
     }
 
-    fn queen_path (&self, from:Position, to:Position) -> Option<Vec<Position>> {
+    fn queen_path (&self, from:Position, to:Position) -> Vec<Position> {
         if self.rook_logic(from,to) { self.rook_path(from,to) }
         else if self.bishop_logic(from,to) { self.bishop_path(from,to) }
-        else {Some(vec!(to))}
+        else { vec!(to) }
     }
 
-    fn rook_path (&self, from:Position, to:Position) -> Option<Vec<Position>> {
+    fn rook_path (&self, from:Position, to:Position) -> Vec<Position> {
         let mut v = Vec::new();
 
         // heading down row or column?
@@ -121,10 +121,10 @@ impl Item {
             for n in range(from.1,to.1) { v.push((from.0,n)) }
         }
 
-        Some(v)
+        v
     }
 
-    fn bishop_path (&self, from:Position, to:Position) -> Option<Vec<Position>> {
+    fn bishop_path (&self, from:Position, to:Position) -> Vec<Position> {
         let mut v = Vec::new();
         let mut m = from.1;
 
@@ -134,16 +134,16 @@ impl Item {
             v.push((n,m));
         }
 
-        Some(v)
+        v
     }
 
     /// gets play path, to be checked later for if legal
-    fn play_path (&self, from:Position, to:Position) -> Option<Vec<Position>> {
+    fn play_path (&self, from:Position, to:Position) -> Vec<Position> {
         match *self {
             Item::Queen => self.queen_path(from,to),
             Item::Rook =>  self.rook_path(from,to),
             Item::Bishop => self.bishop_path(from,to),
-            _ => Some(vec!(to)), //single space destination
+            _ => vec!(to), //single space destination
         }
     }
 }
@@ -176,6 +176,13 @@ impl Player {
                     _ => item.play_isvalid(from,to),
                 }
             }
+        }
+    }
+
+    fn play_path (&self, from: Position , to: Position) -> Vec<Position> {
+        match *self {
+            Player::Black(item) => item.play_path(from,to),
+            Player::White(item) => item.play_path(from,to),
         }
     }
 }
@@ -223,7 +230,7 @@ impl Game {
         &self.board[at.0][at.1]
     }
 
-    /// swap out destination, and return it
+    /// swap out destination, and return original
     fn swap_pos (&mut self,at:Position, p:Option<Player>) -> Option<Player> {
         let oldp;
         if let &Some(_p) = self.get_player(at) {
@@ -238,25 +245,43 @@ impl Game {
         println!("{:?}",self.get_player(from));
         println!("{:?}",self.get_player(to));
 
-        if let &Some(p) = self.get_player(from) { 
-            match (p,self.active) {
+        if let &Some(player) = self.get_player(from) {
+
+            //current active player is playing?
+            match (player,self.active) {
                 (Player::White(_),Player::Black(_)) | 
                     (Player::Black(_),Player::White(_)) => return false,
                 _ => (),
             }
+            
+            //only capturing other players pieces?
+            match (self.active,player) {
+                (Player::White(_),Player::Black(_)) | 
+                (Player::Black(_),Player::White(_)) => return false,
+                _ => (),
+            }
 
-            let capturing = self.capturing(from,to);
-            if p.play_isvalid(from,to, capturing) {
-                if let Some(_p) = self.swap_pos(to,Some(p)) {
+
+            if player.play_isvalid(from,to, self.capturing(from,to)) {
+                let path = player.play_path(from,to).pop(); //get path and remove dest
+
+                let res = path.iter().find(|&n| self.get_player(*n).is_some());
+
+                if res.is_some() { 
+                    println!("blocked! {:?}",res); 
+                    return false 
+                }
+
+                if let Some(_p) = self.swap_pos(to,Some(player)) {
                     println!("captured {:?}",_p);
                     self.captured.push(_p);
                 }
                 self.swap_pos(from,None);
-                true
+
+                return true
             }
-            else {false}
         }
-        else {false}
+        false
     }
 
     fn capturing (&self, from: Position, to: Position) -> bool {
