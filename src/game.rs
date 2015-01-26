@@ -53,7 +53,7 @@ impl Game {
         oldp
     }
 
-    pub fn play(&mut self, from:Position,to:Position) -> bool {
+    pub fn play (&mut self, from:Position,to:Position) -> PlayResult {
         println!("{:?}",self.get_player(from));
         println!("{:?}",self.get_player(to));
 
@@ -62,15 +62,15 @@ impl Game {
             //current active player is playing?
             match (player,self.active) {
                 (Player::White(_),Player::Black(_)) | 
-                (Player::Black(_),Player::White(_)) => return false,
+                (Player::Black(_),Player::White(_)) => return PlayResult::Illegal,
                 _ => (),
             }
             
-            //only capturing other players pieces?
+            //only capturing other player's pieces, or nothing at all?
             if let &Some(oppo) =  self.get_player(to) {
                 match (player, oppo) {
                     (Player::White(_),Player::White(_)) | 
-                    (Player::Black(_),Player::Black(_)) => return false,
+                    (Player::Black(_),Player::Black(_)) => return PlayResult::Illegal,
                     _ => (),
                 }
             }
@@ -78,24 +78,24 @@ impl Game {
 
             if player.play_isvalid(from,to, self.capturing(from,to)) {
                 let path = player.play_path(from,to).pop(); //get path and remove dest
-
                 let res = path.iter().find(|&n| self.get_player(*n).is_some());
-
-                if res.is_some() { 
-                    println!("blocked! {:?}",res); 
-                    return false 
+                if res.is_some() { //blocked
+                    return PlayResult::Blocked(*res.unwrap()) 
                 }
 
-                if let Some(_p) = self.swap_pos(to,Some(player)) {
-                    println!("captured {:?}",_p);
+                let _tmp: Option<Player>;
+                if let Some(_p) = self.swap_pos(to,Some(player)) { //captured
+                    _tmp = Some(_p);
                     self.captured.push(_p);
                 }
-                self.swap_pos(from,None);
-
-                return true
+                else { _tmp = None; }
+                
+                self.swap_pos(from,None); //clear the space it came from
+                return PlayResult::Ok(_tmp);
             }
         }
-        false
+        
+        PlayResult::Invalid
     }
 
     fn capturing (&self, from: Position, to: Position) -> bool {
@@ -109,4 +109,12 @@ impl Game {
         }
         false
     }
+}
+
+#[derive(Show)]
+pub enum PlayResult {
+    Ok(Option<Player>),
+    Blocked(Position),
+    Invalid,
+    Illegal,
 }
