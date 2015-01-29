@@ -18,23 +18,23 @@ impl Game {
         board[6] = [Some(Player::Black(Item::Pawn));8];
 
         //setup home row
-        board[0] = [Some(Player::White(Item::Rook)),
+        board[0] = [Some(Player::White(Item::Rook(false))),
                     Some(Player::White(Item::Knight)),
                     Some(Player::White(Item::Bishop)),
                     Some(Player::White(Item::Queen)),
-                    Some(Player::White(Item::King)),
+                    Some(Player::White(Item::King(false))),
                     Some(Player::White(Item::Bishop)),
                     Some(Player::White(Item::Knight)),
-                    Some(Player::White(Item::Rook))];
+                    Some(Player::White(Item::Rook(false)))];
 
-        board[7] = [Some(Player::Black(Item::Rook)),
+        board[7] = [Some(Player::Black(Item::Rook(false))),
                     Some(Player::Black(Item::Knight)),
                     Some(Player::Black(Item::Bishop)),
                     Some(Player::Black(Item::Queen)),
-                    Some(Player::Black(Item::King)),
+                    Some(Player::Black(Item::King(false))),
                     Some(Player::Black(Item::Bishop)),
                     Some(Player::Black(Item::Knight)),
-                    Some(Player::Black(Item::Rook))];
+                    Some(Player::Black(Item::Rook(false)))];
         Game { board:board, captured:Vec::new(), active: Player::White(Item::Pawn) }
     }
 
@@ -57,7 +57,7 @@ impl Game {
         println!("{:?}",self.get_player(from));
         println!("{:?}",self.get_player(to));
 
-        if let &Some(player) = self.get_player(from) {
+        if let &Some(player) = self.get_player(from) { //must select an actual piece
 
             //current active player is playing?
             match (player,self.active) {
@@ -116,5 +116,5 @@ pub enum PlayResult {
     Ok(Option<Player>),
     Blocked(Position),
     Invalid,
-    Illegal,
+    Illegal, //todo: consider combining invalid and illegal?
 }
