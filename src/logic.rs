@@ -1,4 +1,4 @@
-#[derive(Show,Copy)]
+#[derive(Debug,Copy)]
 pub enum Item {
     Pawn,
     King(bool),
@@ -6,13 +6,21 @@ pub enum Item {
     Rook(bool),
     Knight, 
     Bishop,
-    EnPass,
+    EnPass(Position), //position to original pawn
 }
 
 enum PawnMove {
     Single,
     Double,
     Capture,
+}
+
+// generic move types, needed at a higher level, so pass this back to Game
+pub enum MoveType {
+    Regular,
+    Castle, // rook or king castling
+    Double(Position), //pawns double contains enpass ghost item's position
+    Upgrade, //consider calling this queen, since that's the upgrade for pawn
 }
 
 pub type Position = (usize,usize); //change to u8 when rust gets changed!
@@ -44,20 +52,20 @@ impl Item {
         false
     }
 
-    fn rook_logic (&self, from:Position, to:Position, hasmoved:bool) -> bool {
+    fn rook_logic (&self, from:Position, to:Position, hasmoved:bool) -> Option<MoveType> {
         if to.0 == from.0 ||
-            to.1 == from.1 {true}
-        else if self.castling_logic(from,to) && !hasmoved {true}
-        else {false}
+            to.1 == from.1 {Some(MoveType::Regular)}
+        else if self.castling_logic(from,to) && !hasmoved {Some(MoveType::Castle)}
+        else {None}
     }
 
-    fn king_logic (&self, from:Position, to:Position, hasmoved:bool) -> bool {
+    fn king_logic (&self, from:Position, to:Position, hasmoved:bool) -> Option<MoveType> {
         let (r,_) = abs_pos(from,to);
 
         if r < 2 &&
-            r < 2 {true}
-        else if self.castling_logic(from,to) && !hasmoved {true}
-        else {false}
+            r < 2 {Some(MoveType::Regular)}
+        else if self.castling_logic(from,to) && !hasmoved {Some(MoveType::Castle)}
+        else {None}
     }
 
     fn bishop_logic (&self, from:Position, to:Position) -> bool {
@@ -101,24 +109,57 @@ impl Item {
         }
     }
 
-    fn play_isvalid (&self, from:Position, to:Position) -> bool {
-        if from == to {return false}
+    fn play_isvalid (&self, from:Position, to:Position) -> Option<MoveType> {
+        if from == to {return None}
         match *self {
             Item::Queen => { // queen is in essence rook, bishop, and king combined
-                if self.rook_logic(from,to,true) ||
-                    self.bishop_logic(from,to) ||
-                    self.king_logic(from,to,true) {true}
-                else {false}
+                //todo: clean this up!
+                match self.rook_logic(from,to,true) {
+                    Some(MoveType::Regular) => {return Some(MoveType::Regular);},
+                    _ => (),
+                }
+                match self.king_logic(from,to,true) {
+                    Some(MoveType::Regular) => {return Some(MoveType::Regular);},
+                    _ => (),
+                }
+                if self.bishop_logic(from,to) {Some(MoveType::Regular)}
+                else {None}
             },
-            Item::Knight => self.knight_logic(from,to),
-            Item::Bishop => self.bishop_logic(from,to),
-            _ => false,
+            Item::Knight => { if self.knight_logic(from,to) {Some(MoveType::Regular)}
+                              else {None} },
+            Item::Bishop => { if self.bishop_logic(from,to) {Some(MoveType::Regular)}
+                              else {None} },
+            _ => None,
         }
     }
 
+    /// internal convenience function
+    fn pawn_isvalid (&self, from: Position , to: Position, inverted:bool, capturing:bool) -> Option<MoveType> {
+        if let Some(res) = self.pawn_logic(from,to,inverted) {
+            match res {
+                PawnMove::Single => Some(MoveType::Regular),
+                PawnMove::Double => {
+                    if inverted { Some(MoveType::Double((from.0 - 1, from.1))) }
+                    else { Some(MoveType::Double((to.0 - 1, from.1))) }
+                },
+                PawnMove::Capture => {
+                    if capturing {Some(MoveType::Regular)}
+                    else {None}
+                },
+            }
+        }
+        else {None}
+    }
+
+// pathing
+
     fn queen_path (&self, from:Position, to:Position) -> Vec<Position> {
-        if self.rook_logic(from,to,true) { self.rook_path(from,to) }
-        else if self.bishop_logic(from,to) { self.bishop_path(from,to) }
+        match self.rook_logic(from,to,true) {
+            Some(MoveType::Regular) => {return self.rook_path(from,to);},
+            _ => (),
+        }
+        
+        if self.bishop_logic(from,to) { self.bishop_path(from,to) }
         else { vec!(to) }
     }
 
@@ -158,9 +199,11 @@ impl Item {
             _ => vec!(to), //single space destination
         }
     }
+
+
 }
 
-#[derive(Show,Copy)]
+#[derive(Debug,Copy)]
 pub enum Player {
     Black(Item),
     White(Item),
@@ -168,21 +211,13 @@ pub enum Player {
 
 impl Player {
     /// check play logic for valid moves
-    pub fn play_isvalid (&self, from: Position , to: Position, capturing: bool) -> bool {
+    /// anonymous matches on enums would be helpful in removing duplicated code
+    pub fn play_isvalid (&self, from: Position , to: Position, capturing: bool) -> Option<MoveType> {
         match *self {
             Player::Black(item) => {
                 match item {
                     Item::Pawn => { //pawn logic is special
-                        if let Some(res) = item.pawn_logic(from,to,true) {
-                            match res {
-                                PawnMove::Single | PawnMove::Double => true,
-                                PawnMove::Capture => {
-                                    if capturing {true}
-                                    else {false}
-                                },
-                            }
-                        }
-                        else {false}
+                        item.pawn_isvalid(from,to,true,capturing)
                     },
                     Item::King(hasmoved) => { //king logic is special
                         item.king_logic(from,to,hasmoved)
@@ -196,16 +231,7 @@ impl Player {
             Player::White(item) => {
                 match item {
                     Item::Pawn => {
-                        if let Some(res) = item.pawn_logic(from,to,true) {
-                            match res {
-                                PawnMove::Single | PawnMove::Double => true,
-                                PawnMove::Capture => {
-                                    if capturing {true}
-                                    else {false}
-                                },
-                            }
-                        }
-                        else {false}
+                        item.pawn_isvalid(from,to,false,capturing)
                     },
                      Item::King(hasmoved) => { //king logic is special
                         item.king_logic(from,to,hasmoved)

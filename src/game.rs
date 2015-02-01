@@ -1,8 +1,8 @@
-use super::{Player,Item,Position};
+use super::{Player,Item,Position,MoveType};
 
 pub type BoardLayout = [[Option<Player>;8];8];
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Game {
     board: BoardLayout,
     captured: Vec<Player>,
@@ -76,22 +76,45 @@ impl Game {
             }
 
 
-            if player.play_isvalid(from,to, self.capturing(from,to)) {
+            if let Some(mt) = player.play_isvalid(from,to, self.capturing(from,to)) {
                 let path = player.play_path(from,to).pop(); //get path and remove dest
                 let res = path.iter().find(|&n| self.get_player(*n).is_some());
                 if res.is_some() { //blocked
                     return PlayResult::Blocked(*res.unwrap()) 
                 }
 
-                let _tmp: Option<Player>;
+                let _cap: Option<Player>;
                 if let Some(_p) = self.swap_pos(to,Some(player)) { //captured
-                    _tmp = Some(_p);
+                    _cap = Some(_p);
                     self.captured.push(_p);
                 }
-                else { _tmp = None; }
+                else { _cap = None; }
                 
-                self.swap_pos(from,None); //clear the space it came from
-                return PlayResult::Ok(_tmp);
+                // match the movetypes
+                match mt {
+                    MoveType::Castle => {
+                        let _item = self.swap_pos(to,Some(player));
+                        self.swap_pos(from,_item);
+                    },
+                    MoveType::Double(pos) => { 
+                        //swap in the enpass ghost
+                        match (player) {
+                            Player::White(_) => {self.swap_pos(pos,Some(Player::White(Item::EnPass(to))));},
+                            Player::Black(_) => {self.swap_pos(pos,Some(Player::White(Item::EnPass(to))));},
+                        }
+                        self.swap_pos(from,None);
+                    },
+                    MoveType::Upgrade => {
+                        match (player) {
+                            Player::White(_) => {self.swap_pos(to,Some(Player::White(Item::Queen)));},
+                            Player::Black(_) => {self.swap_pos(to,Some(Player::Black(Item::Queen)));},
+                        }
+                        self.swap_pos(from,None);
+                    },
+                    MoveType::Regular => {self.swap_pos(from,None);}, //clear the space it came from
+                }
+
+                return PlayResult::Ok(_cap);
             }
         }
         
@@ -111,10 +134,11 @@ impl Game {
     }
 }
 
-#[derive(Show)]
+//todo: consider combining invalid and illegal?
+#[derive(Debug)]
 pub enum PlayResult {
     Ok(Option<Player>),
     Blocked(Position),
-    Invalid,
-    Illegal, //todo: consider combining invalid and illegal?
+    Invalid, //not a valid move, according to logic
+    Illegal, //a move that is valid, but not legal
 }
