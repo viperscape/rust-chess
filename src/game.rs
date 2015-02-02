@@ -6,7 +6,7 @@ pub type BoardLayout = [[Option<Player>;8];8];
 pub struct Game {
     board: BoardLayout,
     captured: Vec<Player>,
-    active: Player, //use a fake piece to set who is current active player
+    active: Player, //use a fake piece to set who is current active player, we match against this
 }
 
 impl Game {
@@ -54,9 +54,6 @@ impl Game {
     }
 
     pub fn play (&mut self, from:Position,to:Position) -> PlayResult {
-        println!("{:?}",self.get_player(from));
-        println!("{:?}",self.get_player(to));
-
         if let &Some(player) = self.get_player(from) { //must select an actual piece
 
             //current active player is playing?
@@ -65,32 +62,53 @@ impl Game {
                 (Player::Black(_),Player::White(_)) => return PlayResult::Illegal,
                 _ => (),
             }
-            
-            //only capturing other player's pieces, or nothing at all?
-            if let &Some(oppo) =  self.get_player(to) {
-                match (player, oppo) {
-                    (Player::White(_),Player::White(_)) | 
-                    (Player::Black(_),Player::Black(_)) => return PlayResult::Illegal,
-                    _ => (),
-                }
-            }
-
 
             if let Some(mt) = player.play_isvalid(from,to, self.capturing(from,to)) {
+                //only "to" other player's pieces, or nothing at all? unless castling!
+                if let &Some(oppo) = self.get_player(to) {
+                    match mt {
+                        MoveType::Castle => (),
+                        _ => {
+                            match (player, oppo) {
+                                (Player::White(_),Player::White(_)) | 
+                                (Player::Black(_),Player::Black(_)) => return PlayResult::Illegal,
+                                _ => (),
+                            }
+                        }
+                    }
+                }
+
+
                 let path = player.play_path(from,to).pop(); //get path and remove dest
                 let res = path.iter().find(|&n| self.get_player(*n).is_some());
+
                 if res.is_some() { //blocked
                     return PlayResult::Blocked(*res.unwrap()) 
                 }
 
+
+
                 let _cap: Option<Player>;
                 if let Some(_p) = self.swap_pos(to,Some(player)) { //captured
-                    _cap = Some(_p);
-                    self.captured.push(_p);
+                    let _item = match _p {
+                        Player::White(item) => item,
+                        Player::Black(item) => item,
+                    };
+                    match _item {
+                        Item::EnPass(pos) => {
+                            let _p = self.get_player(pos).unwrap();
+                            _cap = Some(_p);
+                            self.captured.push(_p);
+                        },
+                        _ => {
+                            _cap = Some(_p);
+                            self.captured.push(_p);
+                        },
+                    }
                 }
                 else { _cap = None; }
                 
-                // match the movetypes
+                // movetypes need different handling for board mutation
                 match mt {
                     MoveType::Castle => {
                         let _item = self.swap_pos(to,Some(player));
@@ -112,6 +130,30 @@ impl Game {
                         self.swap_pos(from,None);
                     },
                     MoveType::Regular => {self.swap_pos(from,None);}, //clear the space it came from
+                }
+
+                //must clear out all en passant ghost holders for opposing side, we had our chance
+                for r in self.board.iter_mut() {
+                    for c in r.iter_mut() {
+                        if let Some(p) = *c {
+                            match (p,self.active) {
+                                (Player::White(item),Player::Black(_)) => {
+                                    match item {
+                                        Item::EnPass(_) => {*c = None;},
+                                        _ => (),
+                                    }
+                                }
+                                (Player::Black(item),Player::White(_)) => {
+                                    match item {
+                                        Item::EnPass(_) => {*c = None;},
+                                        _ => (),
+                                    }
+                                }
+                                _ => (),
+                            }
+                            
+                        }
+                    }
                 }
 
                 return PlayResult::Ok(_cap);
