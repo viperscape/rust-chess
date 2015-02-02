@@ -199,8 +199,6 @@ impl Item {
             _ => vec!(to), //single space destination
         }
     }
-
-
 }
 
 #[derive(Debug,Copy)]
@@ -249,6 +247,36 @@ impl Player {
         match *self {
             Player::Black(item) => item.play_path(from,to),
             Player::White(item) => item.play_path(from,to),
+        }
+    }
+
+    /// special pathing for castling, returns tuple of new positions for (king,rook)
+    pub fn castle_path (&self, from:Position, to:Position) -> (Position,Position) {
+        match *self {
+            Player::Black(item) => {
+                match item {
+                    Item::Rook(_) => {
+                        if from.1 == 7 { ((7,6),(7,5)) }
+                        else { ((7,2),(7,3)) }
+                    },
+                    _ => {
+                        if to.1 == 7 { ((7,6),(7,5)) }
+                        else { ((7,2),(7,3)) }
+                    }
+                }
+            },
+            Player::White(item) => {
+                match item {
+                    Item::Rook(_) => {
+                        if from.1 == 7 { ((0,6),(0,5)) }
+                        else { ((0,2),(0,3)) }
+                    },
+                    _ => {
+                        if to.1 == 7 { ((0,6),(0,5)) }
+                        else { ((0,2),(0,3)) }
+                    }
+                }
+            },
         }
     }
 }

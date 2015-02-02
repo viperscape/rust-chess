@@ -88,31 +88,49 @@ impl Game {
 
 
 
-                let _cap: Option<Player>;
-                if let Some(_p) = self.swap_pos(to,Some(player)) { //captured
-                    let _item = match _p {
-                        Player::White(item) => item,
-                        Player::Black(item) => item,
-                    };
-                    match _item {
-                        Item::EnPass(pos) => {
-                            let _p = self.get_player(pos).unwrap();
-                            _cap = Some(_p);
-                            self.captured.push(_p);
-                        },
-                        _ => {
-                            _cap = Some(_p);
-                            self.captured.push(_p);
-                        },
+                let _cap: Option<Player>; //capture result to return
+                match mt {
+                    MoveType::Castle => _cap = None,
+                    _ => {
+                        if let Some(_p) = self.swap_pos(to,Some(player)) { //captured
+                            let _item = match _p { //I should consider an unwrap fn
+                                Player::White(item) => item,
+                                Player::Black(item) => item,
+                            };
+                            match _item {
+                                Item::EnPass(pos) => {
+                                    let _p = self.get_player(pos).unwrap();
+                                    _cap = Some(_p);
+                                    self.captured.push(_p);
+                                },
+                                _ => {
+                                    _cap = Some(_p);
+                                    self.captured.push(_p);
+                                },
+                            }
+                        }
+                        else { _cap = None; }
                     }
                 }
-                else { _cap = None; }
-                
+
+
                 // movetypes need different handling for board mutation
                 match mt {
                     MoveType::Castle => {
-                        let _item = self.swap_pos(to,Some(player));
-                        self.swap_pos(from,_item);
+                        let (kp,rp) = player.castle_path(from,to);
+                        self.swap_pos(from,None);
+                        self.swap_pos(to,None);
+
+                        match player {
+                            Player::White(_) => {
+                                self.swap_pos(kp,Some(Player::White(Item::King(true))));
+                                self.swap_pos(rp,Some(Player::White(Item::Rook(true))));
+                            },
+                            _ => {
+                                self.swap_pos(kp,Some(Player::Black(Item::King(true))));
+                                self.swap_pos(rp,Some(Player::Black(Item::Rook(true))));
+                            }
+                        }
                     },
                     MoveType::Double(pos) => { 
                         //swap in the enpass ghost
@@ -154,6 +172,12 @@ impl Game {
                             
                         }
                     }
+                }
+
+                //flip active player
+                match self.active {
+                    Player::Black(item) => {self.active = Player::White(item);},
+                    Player::White(item) => {self.active = Player::Black(item);},
                 }
 
                 return PlayResult::Ok(_cap);
