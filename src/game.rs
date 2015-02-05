@@ -255,6 +255,8 @@ impl Game {
                         (Player::White(_),Player::White(_)) |
                         (Player::Black(_),Player::Black(_))  => (),
                         _ => {
+                            if (i,j) == king { break; } //exclude kings
+
                             let res = p.play_isvalid((i,j),king,true);
 
                             if let Some(mt) = res { 
@@ -262,9 +264,7 @@ impl Game {
                                     MoveType::Regular => { 
                                         let path = p.play_path((i,j),king).pop();
                                         let res = path.iter().find(|&n| self.get_player(*n).is_some());
-
                                         if !res.is_some() { //not blocked
-                                            println!("{:?}{:?}{:?}",p,self.active,(i,j));
                                             return Some((i,j)); 
                                         }
                                     },
