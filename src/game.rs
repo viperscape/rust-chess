@@ -174,13 +174,35 @@ impl Game {
                     }
                 }
 
+                
+                //look for potential king checks
+                //start with collecting the two kings' positions
+                let kings = self.get_kings();
+                //iter thru and validate checks
+                let rkme: (Position,Option<Position>);
+                let rkthem: (Position,Option<Position>);
+                match (self.get_player(kings[0]).unwrap(),self.active) {
+                    (Player::Black(_),Player::Black(_)) |
+                    (Player::White(_),Player::White(_)) => { 
+                        rkme = (kings[0],self.check_isvalid(kings[0]));
+                        rkthem = (kings[1],self.check_isvalid(kings[1])); 
+                    }
+                    _ => {
+                        rkme = (kings[1],self.check_isvalid(kings[1])); 
+                        rkthem = (kings[0],self.check_isvalid(kings[0])); 
+                    }
+                }
+
+                if let Some(check) = rkme.1 { return PlayResult::Check(check,rkme.0); }
+
                 //flip active player
                 match self.active {
                     Player::Black(item) => {self.active = Player::White(item);},
                     Player::White(item) => {self.active = Player::Black(item);},
                 }
 
-                return PlayResult::Ok(_cap);
+                if let Some(check) = rkthem.1 { return PlayResult::Check(check,rkthem.0); }
+                else { return PlayResult::Ok(_cap); }
             }
         }
         
@@ -198,6 +220,67 @@ impl Game {
         }
         false
     }
+
+    /// get kings' positions
+    fn get_kings (&self) -> Vec<Position> {
+        let mut kings: Vec<Position> = vec!();
+        let mut i = 0;
+        for r in self.board.iter() { //collect kings positions
+            let mut j = 0;
+            for c in r.iter() {
+                if let Some(_p) = *c {
+                    match _p {
+                        Player::White(Item::King(_)) |
+                        Player::Black(Item::King(_)) => kings.push((i,j)),
+                        _ => (),
+                    }
+                }
+                j += 1;
+            }
+            if kings.len() == 2 {break}
+            i += 1;
+        }
+        kings
+    }
+
+    fn check_isvalid (&self, king: Position) -> Option<Position> {
+        let mut i = 0;
+        
+        for r in self.board.iter() {
+            let mut j = 0;
+            for c in r.iter() {
+                if let Some(p) = *c {
+                    
+                    match (p,self.active) {
+                        (Player::White(_),Player::White(_)) |
+                        (Player::Black(_),Player::Black(_))  => (),
+                        _ => {
+                            let res = p.play_isvalid((i,j),king,true);
+
+                            if let Some(mt) = res { 
+                                match mt {
+                                    MoveType::Regular => { 
+                                        let path = p.play_path((i,j),king).pop();
+                                        let res = path.iter().find(|&n| self.get_player(*n).is_some());
+
+                                        if !res.is_some() { //not blocked
+                                            println!("{:?}{:?}{:?}",p,self.active,(i,j));
+                                            return Some((i,j)); 
+                                        }
+                                    },
+                                    _ => (),
+                                }
+                            }
+                        }
+                    }
+                }
+                j += 1;
+            }
+            i += 1;
+        }
+        None
+    }
+
 }
 
 //todo: consider combining invalid and illegal?
@@ -207,4 +290,5 @@ pub enum PlayResult {
     Blocked(Position),
     Invalid, //not a valid move, according to logic
     Illegal, //a move that is valid, but not legal
+    Check(Position,Position), //from piece and to king
 }
