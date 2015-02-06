@@ -7,6 +7,7 @@ pub struct Game {
     board: BoardLayout,
     captured: Vec<Player>,
     active: Player, //use a fake piece to set who is current active player, we match against this
+    check: Option<Player>, //which player is in check
 }
 
 impl Game {
@@ -35,7 +36,9 @@ impl Game {
                     Some(Player::Black(Item::Bishop)),
                     Some(Player::Black(Item::Knight)),
                     Some(Player::Black(Item::Rook(false)))];
-        Game { board:board, captured:Vec::new(), active: Player::White(Item::Pawn) }
+        Game { board:board, captured:Vec::new(), 
+               active: Player::White(Item::Pawn),
+               check: None }
     }
 
     pub fn get_player (&self,at:Position) -> &Option<Player> {
@@ -55,6 +58,9 @@ impl Game {
 
     pub fn play (&mut self, from:Position,to:Position) -> PlayResult {
         if let &Some(player) = self.get_player(from) { //must select an actual piece
+            //let mut events: Vec<Events> = vec!(); //events to roll back if needed
+
+            let _board = Box::new(self.board); //copy original board, to swap back to if needed
 
             //current active player is playing?
             match (player,self.active) {
@@ -88,7 +94,7 @@ impl Game {
 
 
 
-                let _cap: Option<Player>; //capture result to return
+                let _cap: Option<(Player,Position)>; //capture result to return
                 match mt {
                     MoveType::Castle => _cap = None,
                     _ => {
@@ -100,11 +106,13 @@ impl Game {
                             match _item {
                                 Item::EnPass(pos) => {
                                     let _p = self.get_player(pos).unwrap();
-                                    _cap = Some(_p);
+                                    _cap = Some((_p,pos));
+                                    //events.push(Events::Capture(_p,pos));
                                     self.captured.push(_p);
                                 },
                                 _ => {
-                                    _cap = Some(_p);
+                                    _cap = Some((_p,to));
+                                    //events.push(Events::Capture(_p,to));
                                     self.captured.push(_p);
                                 },
                             }
@@ -120,6 +128,8 @@ impl Game {
                         let (kp,rp) = player.castle_path(from,to);
                         self.swap_pos(from,None);
                         self.swap_pos(to,None);
+
+                        //events.push(Events::Move(,));
 
                         match player {
                             Player::White(_) => {
@@ -139,6 +149,9 @@ impl Game {
                             Player::Black(_) => {self.swap_pos(pos,Some(Player::White(Item::EnPass(to))));},
                         }
                         self.swap_pos(from,None);
+
+                        //events.push(Events::Move(from,to));
+                        //events.push(Events::AddEnPass(pos));
                     },
                     MoveType::Upgrade => {
                         match (player) {
@@ -146,8 +159,13 @@ impl Game {
                             Player::Black(_) => {self.swap_pos(to,Some(Player::Black(Item::Queen)));},
                         }
                         self.swap_pos(from,None);
+                        //events.push(Events::Move(from,to));
+                        //events.push(Events::Upgrade(to));
                     },
-                    MoveType::Regular => {self.swap_pos(from,None);}, //clear the space it came from
+                    MoveType::Regular => { //clear the space it came from
+                        self.swap_pos(from,None);
+                        //events.push(Events::Move(from,to));
+                    },
                 }
 
                 //must clear out all en passant ghost holders for opposing side, we had our chance
@@ -193,16 +211,21 @@ impl Game {
                     }
                 }
 
-                if let Some(check) = rkme.1 { return PlayResult::Check(check,rkme.0); }
-
-                //flip active player
-                match self.active {
-                    Player::Black(item) => {self.active = Player::White(item);},
-                    Player::White(item) => {self.active = Player::Black(item);},
+                if let Some(check) = rkme.1 { 
+                    self.board = *_board; // swap back original board
+                    if _cap.is_some() { self.captured.pop(); } //pop off captured player if needed
+                    return PlayResult::Check(check,rkme.0); 
                 }
+                else {
+                    //flip active player
+                    match self.active {
+                        Player::Black(item) => {self.active = Player::White(item);},
+                        Player::White(item) => {self.active = Player::Black(item);},
+                    }
 
-                if let Some(check) = rkthem.1 { return PlayResult::Check(check,rkthem.0); }
-                else { return PlayResult::Ok(_cap); }
+                    if let Some(check) = rkthem.1 { return PlayResult::Check(check,rkthem.0); }
+                    else { return PlayResult::Ok(_cap); }
+                }
             }
         }
         
@@ -286,9 +309,19 @@ impl Game {
 //todo: consider combining invalid and illegal?
 #[derive(Debug)]
 pub enum PlayResult {
-    Ok(Option<Player>),
+    Ok(Option<(Player,Position)>),
     Blocked(Position),
     Invalid, //not a valid move, according to logic
     Illegal, //a move that is valid, but not legal
     Check(Position,Position), //from piece and to king
 }
+
+// events to be used for rolling board back if needed
+// note: these are similar looking but not the same as item or movetypes
+/*enum Events {
+    Move(Position,Position),
+    Capture(Player,Position),
+    AddEnPass(Position),
+    RemEnPass(Position),
+    Upgrade(Position),
+}*/
