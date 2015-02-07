@@ -39,7 +39,7 @@ fn abs_pos (from:Position,to:Position) -> (usize,usize) {
 
 impl Item {
     fn castling_logic  (&self, from:Position, to:Position) -> bool {
-        if to.0 != 0 { return false; } //not on home row?
+        if to.0 != 0 || to.0 != 7 { return false; } //not on home row?
         if to.1 == 4 { //castling? to king
             if from == (0,0) ||
                 from == (0,7) { return true; }
