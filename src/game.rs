@@ -58,7 +58,6 @@ impl Game {
 
     pub fn play (&mut self, from:Position,to:Position) -> PlayResult {
         if let &Some(player) = self.get_player(from) { //must select an actual piece
-            //let mut events: Vec<Events> = vec!(); //events to roll back if needed
 
             let _board = Box::new(self.board); //copy original board, to swap back to if needed
 
@@ -107,12 +106,10 @@ impl Game {
                                 Item::EnPass(pos) => {
                                     let _p = self.get_player(pos).unwrap();
                                     _cap = Some((_p,pos));
-                                    //events.push(Events::Capture(_p,pos));
                                     self.captured.push(_p);
                                 },
                                 _ => {
                                     _cap = Some((_p,to));
-                                    //events.push(Events::Capture(_p,to));
                                     self.captured.push(_p);
                                 },
                             }
@@ -128,8 +125,6 @@ impl Game {
                         let (kp,rp) = player.castle_path(from,to);
                         self.swap_pos(from,None);
                         self.swap_pos(to,None);
-
-                        //events.push(Events::Move(,));
 
                         match player {
                             Player::White(_) => {
@@ -149,9 +144,6 @@ impl Game {
                             Player::Black(_) => {self.swap_pos(pos,Some(Player::White(Item::EnPass(to))));},
                         }
                         self.swap_pos(from,None);
-
-                        //events.push(Events::Move(from,to));
-                        //events.push(Events::AddEnPass(pos));
                     },
                     MoveType::Upgrade => {
                         match (player) {
@@ -159,12 +151,9 @@ impl Game {
                             Player::Black(_) => {self.swap_pos(to,Some(Player::Black(Item::Queen)));},
                         }
                         self.swap_pos(from,None);
-                        //events.push(Events::Move(from,to));
-                        //events.push(Events::Upgrade(to));
                     },
                     MoveType::Regular => { //clear the space it came from
                         self.swap_pos(from,None);
-                        //events.push(Events::Move(from,to));
                     },
                 }
 
@@ -223,8 +212,14 @@ impl Game {
                         Player::White(item) => {self.active = Player::Black(item);},
                     }
 
-                    if let Some(check) = rkthem.1 { return PlayResult::Check(check,rkthem.0); }
-                    else { return PlayResult::Ok(_cap); }
+                    if let Some(check) = rkthem.1 { 
+                        self.check = Some(self.get_player(rkthem.0).unwrap());
+                        return PlayResult::Check(check,rkthem.0);
+                    }
+                    else { 
+                        self.check = None;
+                        return PlayResult::Ok(_cap); 
+                    }
                 }
             }
         }
@@ -315,13 +310,3 @@ pub enum PlayResult {
     Illegal, //a move that is valid, but not legal
     Check(Position,Position), //from piece and to king
 }
-
-// events to be used for rolling board back if needed
-// note: these are similar looking but not the same as item or movetypes
-/*enum Events {
-    Move(Position,Position),
-    Capture(Player,Position),
-    AddEnPass(Position),
-    RemEnPass(Position),
-    Upgrade(Position),
-}*/
