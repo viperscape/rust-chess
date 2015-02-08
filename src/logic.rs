@@ -180,11 +180,18 @@ impl Item {
     fn bishop_path (&self, from:Position, to:Position) -> Vec<Position> {
         let mut v = Vec::new();
         let mut m = from.1;
+        let mut tr = to.0;
 
-        for n in range(from.0,to.0) {
+        //adjust by 1 for range
+        if from.0 > to.0 {tr -= 1;}
+        else {tr += 1;}
+
+        for n in range(from.0,tr) {
+            v.push((n,m));
+
+            //adjust column
             if from.1 > to.1 { m-=1; }
             else { m+=1; }
-            v.push((n,m));
         }
 
         v
