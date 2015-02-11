@@ -47,6 +47,11 @@ impl Game {
         self.id = id;
     }
 
+    pub fn is_started (&mut self) -> bool {
+        if self.id > 0 { true }
+        else {false}
+    }
+
     pub fn get_player (&self,at:Position) -> &Option<Player> {
         &self.board[at.0][at.1]
     }

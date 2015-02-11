@@ -21,7 +21,10 @@ fn main() {
             Event::Net(comm) => {
                 match comm {
                    Comm::StartGame(g) => {
-                        game.start(g.unwrap());
+                       if !game.is_started(){
+                           game.start(g.unwrap());
+                       }
+                       else { panic!("game already started!"); }
                    },
                     _ => (),
                 }
@@ -29,9 +32,15 @@ fn main() {
             Event::Inp(inp) => {
                 match inp {
                     Inputs::Mouse1 => {
+                        // todo: check if game is started and mouse1 corresponds to a move selection versus a manu selection!
+                        
                         let mv = ((1,1),(2,1));
                         let r: PlayResult = game.play(mv.0,mv.1);
-                        net.send(Comm::Move(mv.0,mv.1));
+                        println!("{:?}",r);
+                        match r {
+                            PlayResult::Ok(_) | PlayResult::Check(_,_) => net.send(Comm::Move(mv.0,mv.1)),
+                            _ => (),
+                        }
                     },
                     _ => (),
                 }
