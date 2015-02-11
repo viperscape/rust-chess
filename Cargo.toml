@@ -9,3 +9,13 @@ keywords = ["chess", "game"]
 
 license = "MIT"
 description = "The Game of Chess, in Rust"
+
+[dependencies.wire]
+git = "https://github.com/TyOverby/wire"
+
+[dependencies.bincode]
+bincode = "https://github.com/TyOverby/bincode"
+
+[dependencies]
+rustc-serialize = "*"
+pistoncore-event = "*"
