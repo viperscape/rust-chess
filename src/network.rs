@@ -1,6 +1,6 @@
 extern crate wire;
 
-use super::{Game,Position};
+use super::{Game,Position,Event};
 use std::thread::Thread;
 use self::wire::{SizeLimit,tcp};
 use std::rand;
@@ -8,7 +8,7 @@ use std::rand;
 use std::sync::mpsc::{channel,Receiver,Sender};
 
 
-#[derive(RustcDecodable, RustcEncodable,Copy)]
+#[derive(Debug,RustcDecodable, RustcEncodable,Copy)]
 pub enum Comm {
     Move(Position,Position), //from, to
     StartGame(Option<u64>),
@@ -48,9 +48,7 @@ impl Network {
     }
 
 
-    pub fn new_client (gid: Option<u64>) -> Receiver<Comm> {
-        let (t,r) = channel();
-
+    pub fn new_client (gid: Option<u64>, t: Sender<Event>) {
         let (i, mut o) = wire::connect_tcp(("localhost",9999),
                                            SizeLimit::Bounded(8),
                                            SizeLimit::Bounded(8)).unwrap();
@@ -60,19 +58,17 @@ impl Network {
 
             for n in i.into_blocking_iter() {
                 match n {
-                    Comm::Move(f,to) => { t.send(Comm::Move(f,to)); },
+                    Comm::Move(f,to) => { t.send(Event::Net(Comm::Move(f,to))); },
                     Comm::EndGame(gid) => {
-                        t.send(Comm::EndGame(gid));
+                        t.send(Event::Net(Comm::EndGame(gid)));
                     },
                     Comm::StartGame(g) => {
                         if let Some(gid) = g {
-                            t.send(Comm::StartGame(g));
+                            t.send(Event::Net(Comm::StartGame(g)));
                         }
                     }, 
                 }
             }
         });
-
-        r
     }
 }

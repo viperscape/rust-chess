@@ -4,7 +4,7 @@ pub use game::{Game};
 pub use logic::{Player,Item,Position, MoveType};
 pub use network::{Network,Comm};
 pub use input::{Inputs};
-pub use events::Events;
+pub use events::{Events,Event};
 
 pub mod game;
 pub mod logic;

@@ -1,23 +1,35 @@
-use std::sync::mpsc::{Receiver};
+use std::sync::mpsc::{Receiver,Sender,channel};
 use super::{Inputs,Comm};
 
+
 pub struct Events {
-    inp: Receiver<Inputs>,
-    net: Receiver<Comm>,
+    t: Sender<Event>,
+    r: Receiver<Event>,
 }
 
 impl Events {
-    pub fn new (inp: Receiver<Inputs>, net: Receiver<Comm>,) -> Events {
-        Events {inp:inp,net:net}
+    pub fn new () -> Events {
+        let (t,r) = channel();
+        Events{ t:t, r:r }
     }
-    
-    pub fn with<F,F2> (&self, mut fnet: F, mut finp: F2)
-        where F: FnMut(Comm),F2: FnMut(Inputs) {
 
-            let net = &self.net;
-            let inp = &self.inp;
+    pub fn branch (&self) -> Sender<Event> {
+        self.t.clone()
+    }
+}
 
-            select! (comm = net.recv() => fnet(comm.unwrap()),
-                     act = inp.recv() => finp(act.unwrap()));
+impl Iterator for Events {
+    type Item = Event;
+    fn next (&mut self) -> Option<Event> {
+        match self.r.recv() {
+            Ok(r) => Some(r),
+            Err(_) => None,
         }
+    }
+}
+
+#[derive(Debug)]
+pub enum Event {
+    Net(Comm),
+    Inp(Inputs),
 }

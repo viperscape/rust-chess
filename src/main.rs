@@ -8,11 +8,16 @@ fn main() {
         let svr = Network::new_server();
     });
     
-    let inp = Inputs::new();
-    let net = Network::new_client(None);
+    let es = Events::new();
+    let inp = Inputs::new(es.branch());
+    let net = Network::new_client(None,es.branch());
     
 
-    let events = Events::new(inp,net);
+    
+    for e in es {
+        println!("{:?}",e);
+        break;
+    }
 
     game.play((1,1),(2,1));
     game.play((6,1),(5,1));
