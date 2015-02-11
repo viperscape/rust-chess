@@ -4,18 +4,17 @@ use std::thread::Thread;
 // ignore this, will be replaced by piston stuff
 // callbacks will likely be passed in before inputs is created
 // as in: an input handler
-pub enum Input {
+pub enum Inputs {
     Key(u16),
     Mouse1,
 }
 
-pub struct Inputs;
 impl Inputs {
-    pub fn new () -> Receiver<Input> {
+    pub fn new () -> Receiver<Inputs> {
         let (t,r) = channel();
 
         Thread::spawn(move || {
-            t.send(Input::Mouse1);
+            t.send(Inputs::Mouse1);
         });
 
         r

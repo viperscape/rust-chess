@@ -20,7 +20,7 @@ pub struct Network;
 impl Network {
     pub fn new_server () {
 
-        let (listener, _) = wire::listen_tcp(("0.0.0.0", 9996)).unwrap();
+        let (listener, _) = wire::listen_tcp(("localhost", 9999)).unwrap();
 
         for conn in listener.into_blocking_iter() {
             Thread::spawn(move || {
@@ -51,8 +51,7 @@ impl Network {
     pub fn new_client (gid: Option<u64>) -> Receiver<Comm> {
         let (t,r) = channel();
 
-        // todo: handle results!
-        let (i, mut o) = wire::connect_tcp(("0.0.0.0",9996),
+        let (i, mut o) = wire::connect_tcp(("localhost",9999),
                                            SizeLimit::Bounded(8),
                                            SizeLimit::Bounded(8)).unwrap();
 
