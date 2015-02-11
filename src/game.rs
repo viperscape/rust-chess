@@ -8,6 +8,7 @@ pub struct Game {
     captured: Vec<Player>,
     active: Player, //use a fake piece to set who is current active player, we match against this
     check: Option<Player>, //which player is in check
+    id: u64,
 }
 
 impl Game {
@@ -38,7 +39,12 @@ impl Game {
                     Some(Player::Black(Item::Rook(false)))];
         Game { board:board, captured:Vec::new(), 
                active: Player::White(Item::Pawn),
-               check: None }
+               check: None,
+               id: 0 }
+    }
+
+    pub fn start (&mut self, id:u64) {
+        self.id = id;
     }
 
     pub fn get_player (&self,at:Position) -> &Option<Player> {

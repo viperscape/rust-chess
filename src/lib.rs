@@ -1,6 +1,6 @@
 extern crate "rustc-serialize" as rustc_serialize;
 
-pub use game::{Game};
+pub use game::{Game,PlayResult};
 pub use logic::{Player,Item,Position, MoveType};
 pub use network::{Network,Comm};
 pub use input::{Inputs};
