@@ -22,7 +22,7 @@ fn main() {
                 match comm {
                    Comm::StartGame(g) => {
                        if !game.is_started(){
-                           game.start(g.unwrap());
+                           game.start(g.unwrap().1);
                        }
                        else { panic!("game already started!"); }
                    },

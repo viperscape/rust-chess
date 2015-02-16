@@ -1,4 +1,5 @@
 extern crate wire;
+extern crate cubby;
 
 use super::{Game,Position,Event,Player,Item};
 use std::thread::Thread;
@@ -7,103 +8,67 @@ use std::rand;
 
 use std::sync::mpsc::{channel,Receiver,Sender};
 
-use std::collections::HashMap;
+//use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use self::cubby::{Ent,Eid};
 
 #[derive(Debug,RustcDecodable, RustcEncodable,Copy)]
 pub enum Comm {
     Move(Position,Position), //from, to
-    StartGame(Option<u64>),
+    StartGame(Option<Eid>),
     EndGame,
     //Chat(String),
 }
 
-struct NetGame {
-    white: u64, // 0 denotes none
-    black: u64,
-    moves: Vec<(Position,Position)>,
-    id: u64,
-}
-
-
-// connected players
-struct Players(HashMap<u64,tcp::OutTcpStream<Comm>>);
+struct Players(Ent<tcp::OutTcpStream<Comm>>);
 impl Players {
     fn new () -> Players {
-        Players(HashMap::new())
-    }
-
-    fn attach (&mut self, o:tcp::OutTcpStream<Comm>) -> u64 {
-        let id = rand::random::<u64>();
-        self.0.insert(id,o);
-        id
-    }
-
-    fn detach (&mut self, id:u64) {
-        self.0.remove(id);
-    }
-
-    fn send (&mut self, id:u64, c:Comm) -> Result<> {
-        self.0.get_mut(id).send(&c)
+        Players(Ent::new(2000))
     }
 }
 
+struct NetGame {
+    white: Option<Eid>,
+    black: Option<Eid>,
+    moves: Vec<(Position,Position)>,
+    //id: u64,
+}
 
-// all open games
-struct Games(HashMap<u64,NetGame>);
+struct Games(Ent<NetGame>);
 impl Games {
     fn new () -> Games {
-        Games(HashMap::new())
+        Games(Ent::new(2000))
     }
 
-    fn insert (&mut self, id:u64) {
-        self.0.insert(id,NetGame { white:0,
-                                   black:0,
-                                   moves:vec!(),
-                                   id:id });
+    fn insert (&self) -> Eid {
+        self.0.add(NetGame { white: None,
+                             black: None,
+                             moves: vec!(), }).unwrap()
     }
 
     // todo: check for what side player should be on!
-    fn attach (&mut self, gid:u64, pid:u64) -> Option<Player> {
-        match self.0.get_mut(&gid) {
-            Some(g) => {
-                if g.white.is_some() {
-                    g.black = pid;
-                    Some(Player::Black(Item::Pawn))
-                }
-                else {
-                    g.white = pid;
-                    Some(Player::White(Item::Pawn))
-                }
-            },
-            None => None,
+    fn attach (&self, e: Eid, p:Eid) -> Option<Player> {
+        let r = self.0.with_mut(e, move |g| {
+            if g.white.is_some() {
+                g.black = Some(p);
+                Some(Player::Black(Item::Pawn))
+            }
+            else {
+                g.white = Some(p);
+                Some(Player::White(Item::Pawn))
+            }
+        });
+
+        match r {
+            Ok(rr) => rr,
+            _ => None,
         }
     }
 
-    fn update (&mut self, id:u64, m: (Position,Position)) {
-        match self.0.get_mut(&id) {
-            Some(g) => {g.moves.push(m);},
-            None => (),
-        }
-    }
-
-    fn get_last (&self, id:u64) -> Option<(Position,Position)> {
-        match self.0.get(&id) {
-            Some(g) => {
-                let s = g.moves.len()-1;
-                Some(g.moves[s])
-            },
-            None => None,
-        }
-    }
-
-    fn get_moves (&self, id:u64) -> Option<&[(Position,Position)]> {
-        match self.0.get(&id) {
-            Some(g) => {
-                Some(g.moves.as_slice())
-            },
-            None => None,
-        }
+    fn update (&self, e:Eid, m: (Position,Position)) {
+        self.0.with_mut(e, |g| {
+            g.moves.push(m)
+        });
     }
 }
 
@@ -113,9 +78,11 @@ impl Network {
 
         let (listener,_) = wire::listen_tcp(("localhost", 9999)).unwrap();
 
-        let games = Arc::new(Mutex::new(Games::new()));
-        let players = Arc::new(Mutex::new(Players::new()));
+        let games = Arc::new(Games::new());
+        let players = Arc::new(Players::new());
 
+        
+//mut o:tcp::OutTcpStream<Comm>
         for conn in listener.into_blocking_iter() {
             let _games = games.clone();
             let _players = players.clone();
@@ -125,62 +92,40 @@ impl Network {
                                                    SizeLimit::Bounded(1000),
                                                    SizeLimit::Bounded(1000));
 
-                let mut gid:u64 = 0;
-                let mut pid:u64 = 0;
+                let mut gid: Option<Eid> = None;
+                let pid = _players.0.add(o).unwrap();
 
                 for n in i.into_blocking_iter() {
                     match n {
                         Comm::Move(f,t) => {
-                            
+                            if gid.is_some() {
+                                
+                            }
+                            else { break; } // todo: nice-disconnect
                         },
                         Comm::StartGame(g) => {
                             if let Some(_gid) = g {
-                                gid = _gid;
-
-                                // add player
-                                let pid = {
-                                    let mut pl = _players.lock().unwrap();
-                                    *pl.attach(o)
-                                };
-
-                               /* //lookup game id
-                                let r = {
-                                    let mut gl = _games.lock().unwrap();
-                                    *gl.attach(gid)
-                                };*/
-
-                                with_games(_games,|g| {
-                                    g.attach(gid)
-                                });
-
-                                with_players(_players,|p| {
-                                    p.send(&Comm::StartGame(g));
-                                });
-                                
+                                gid = g;
+                                _games.attach(_gid,pid);
                             }
                             else { //generate a game id
-                                let ng = rand::random::<u64>();
-                                with_players(_players,|p| {
-                                    p.send(&Comm::StartGame(Some(ng)));
-                                });
-                                gid = Some(ng);
+                                gid = Some(_games.insert());
                             } 
                         }, 
                         Comm::EndGame => { //end current game
-                            with_players(_players,|p| {
-                                p.send(&Comm::EndGame);
-                            });
+                            if gid.is_some() {
+                                _games.0.remove(gid.unwrap());
+                            }
                             break;
                         }
                     }
-                    
                 }
             });
         }
     }
 
 
-    pub fn new_client (gid: Option<u64>, t: Sender<Event>) -> Network {
+    pub fn new_client (gid: Option<Eid>, t: Sender<Event>) -> Network {
         let (i, mut o) = wire::connect_tcp(("localhost",9999),
                                            SizeLimit::Bounded(1000),
                                            SizeLimit::Bounded(1000)).unwrap();
@@ -191,8 +136,8 @@ impl Network {
             for n in i.into_blocking_iter() {
                 match n {
                     Comm::Move(f,to) => { t.send(Event::Net(Comm::Move(f,to))); },
-                    Comm::EndGame(gid) => {
-                        t.send(Event::Net(Comm::EndGame(gid)));
+                    Comm::EndGame => {
+                        t.send(Event::Net(Comm::EndGame));
                         break;
                     },
                     Comm::StartGame(g) => {
@@ -210,19 +155,4 @@ impl Network {
     pub fn send (&mut self,c:Comm) {
         self.0.send(&c);
     }
-}
-
-
-fn with_players (p: Arc<Mutex<Players>>, f: F) where F: FnMut(Players) {
-    let r = {
-        let mut pl = p.lock().unwrap();
-        f(*pl)
-    };
-}
-
-fn with_games (g: Arc<Mutex<Games>>, f: F) where F: FnMut(Games) {
-    let r = {
-        let mut gl = g.lock().unwrap();
-        f(*gl)
-    };
 }

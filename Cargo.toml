@@ -10,11 +10,11 @@ keywords = ["chess", "game"]
 license = "MIT"
 description = "The Game of Chess, in Rust"
 
+[dependencies.cubby]
+git = "https://github.com/viperscape/cubby"
+
 [dependencies.wire]
 git = "https://github.com/TyOverby/wire"
-
-[dependencies.bincode]
-bincode = "https://github.com/TyOverby/bincode"
 
 [dependencies]
 rustc-serialize = "*"
