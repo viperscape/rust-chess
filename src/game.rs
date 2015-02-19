@@ -275,6 +275,7 @@ impl Game {
     fn check_isvalid (&self, king: Position) -> Option<Position> {
         let mut i = 0;
         
+        //todo: convert to enumerate!
         for r in self.board.iter() {
             let mut j = 0;
             for c in r.iter() {
