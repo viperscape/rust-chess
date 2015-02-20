@@ -48,8 +48,12 @@ impl Games {
     }
 
     // todo: check for what side player should be on!
-    fn attach (&self, e: Eid, p:Eid) -> Option<Player> {
-        let r = self.0.with_mut(e, move |g| {
+    /// currently returns the side they are on, and the last move played in the game
+    fn attach (&self, e: Eid, p:Eid) -> (Option<Player>,Option<(Position,Position)>) {
+        let mut last_move = None;
+        let r = self.0.with_mut(e, |g| {
+            last_move = g.moves.clone().pop();
+
             if g.white.is_some() {
                 g.black = Some(p);
                 Some(Player::Black(Item::Pawn))
@@ -58,18 +62,30 @@ impl Games {
                 g.white = Some(p);
                 Some(Player::White(Item::Pawn))
             }
+
+        });
+
+        match r {
+            Ok(rr) => (rr,last_move),
+            _ => (None, last_move),
+        }
+    }
+
+    fn update (&self, gid:Eid, m: (Position,Position), pid: Eid) -> Option<Eid> {
+        let r = self.0.with_mut(gid, |g| {
+            g.moves.push(m);
+            if g.white.is_some() && g.black.is_some() {
+                if g.white.unwrap() == pid { g.black }
+                else { g.white }
+            }
+            else { None }
         });
 
         match r {
             Ok(rr) => rr,
             _ => None,
         }
-    }
-
-    fn update (&self, e:Eid, m: (Position,Position)) {
-        self.0.with_mut(e, |g| {
-            g.moves.push(m)
-        });
+        
     }
 
     fn find_game (&self, id:u64) -> Option<Eid> {
@@ -87,7 +103,6 @@ impl Network {
         let players = Arc::new(Players::new());
 
         
-//mut o:tcp::OutTcpStream<Comm>
         for conn in listener.into_blocking_iter() {
             let _games = games.clone();
             let _players = players.clone();
@@ -104,7 +119,10 @@ impl Network {
                     match n {
                         Comm::Move(f,t) => {
                             if gid.is_some() {
-                                
+                                let other = _games.update(gid.unwrap(),(f,t), pid);
+                                if let Some(_other) = other { //pass along new move
+                                    _players.0.with_mut(_other,|p| p.send(&n));
+                                }
                             }
                             else { break; } // todo: nice-disconnect
                         },
@@ -121,6 +139,14 @@ impl Network {
                         }, 
                         Comm::EndGame => { //end current game
                             if gid.is_some() {
+                                _games.0.with(gid.unwrap(),|g| {
+                                    if let Some(_p) = g.white {
+                                        _players.0.with_mut(_p,|p| p.send(&n));
+                                    }
+                                    if let Some(_p) = g.black {
+                                        _players.0.with_mut(_p,|p| p.send(&n));
+                                    }
+                                });
                                 _games.0.remove(gid.unwrap());
                             }
                             break;
@@ -141,25 +167,17 @@ impl Network {
 
         Thread::spawn(move || {
             for n in i.into_blocking_iter() {
-                match n {
-                    Comm::Move(f,to) => { t.send(Event::Net(Comm::Move(f,to))); },
-                    Comm::EndGame => {
-                        t.send(Event::Net(Comm::EndGame));
-                        break;
-                    },
-                    Comm::StartGame(g) => {
-                        if let Some(gid) = g {
-                            t.send(Event::Net(Comm::StartGame(g)));
-                        }
-                    }, 
-                }
+                t.send(Event::Net(n));
             }
         });
 
         Network(o)
     }
 
-    pub fn send (&mut self,c:Comm) {
+    pub fn send_server (&mut self,c:Comm) {
         self.0.send(&c);
     }
+
+    //fn send_client(&mut self, c:Comm, pid:Eid) {    
+   // }
 }

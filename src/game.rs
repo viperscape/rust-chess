@@ -253,10 +253,9 @@ impl Game {
     /// get kings' positions
     fn get_kings (&self) -> Vec<Position> {
         let mut kings: Vec<Position> = vec!();
-        let mut i = 0;
-        for r in self.board.iter() { //collect kings positions
-            let mut j = 0;
-            for c in r.iter() {
+
+        for (i,r) in self.board.iter().enumerate() { //collect kings positions
+            for (j,c) in r.iter().enumerate() {
                 if let Some(_p) = *c {
                     match _p {
                         Player::White(Item::King(_)) |
@@ -264,21 +263,15 @@ impl Game {
                         _ => (),
                     }
                 }
-                j += 1;
             }
             if kings.len() == 2 {break}
-            i += 1;
         }
         kings
     }
 
     fn check_isvalid (&self, king: Position) -> Option<Position> {
-        let mut i = 0;
-        
-        //todo: convert to enumerate!
-        for r in self.board.iter() {
-            let mut j = 0;
-            for c in r.iter() {
+        for (i,r) in self.board.iter().enumerate() {
+            for (j,c) in r.iter().enumerate() {
                 if let Some(p) = *c {
                     
                     match (p,self.active) {
@@ -304,9 +297,7 @@ impl Game {
                         }
                     }
                 }
-                j += 1;
             }
-            i += 1;
         }
         None
     }

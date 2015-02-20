@@ -15,18 +15,26 @@ fn main() {
     
 
     let mut i = 0;
-    for e in es {
+    'gameloop: for e in es {
         println!("{:?}",e);
         match e {
             Event::Net(comm) => {
                 match comm {
-                   Comm::StartGame(g) => {
-                       if !game.is_started(){
-                           game.start(g.unwrap());
-                       }
-                       else { panic!("game already started!"); }
-                   },
-                    _ => (),
+                    Comm::StartGame(g) => {
+                        if !game.is_started(){
+                            game.start(g.unwrap());
+                        }
+                        else { panic!("game already started!"); }
+                    },
+                    Comm::Move(f,to) => {
+                        let r: PlayResult = game.play(f,to);
+                        println!("{:?}",r);
+                        match r {
+                            PlayResult::Ok(_) | PlayResult::Check(_,_) => (), // todo: call renderer?
+                            _ => net.send_server(Comm::EndGame), //bad game, cheating?
+                        }
+                    },
+                    Comm::EndGame => break 'gameloop,
                 }
             },
             Event::Inp(inp) => {
@@ -38,7 +46,7 @@ fn main() {
                         let r: PlayResult = game.play(mv.0,mv.1);
                         println!("{:?}",r);
                         match r {
-                            PlayResult::Ok(_) | PlayResult::Check(_,_) => net.send(Comm::Move(mv.0,mv.1)),
+                            PlayResult::Ok(_) | PlayResult::Check(_,_) => net.send_server(Comm::Move(mv.0,mv.1)),
                             _ => (),
                         }
                     },
@@ -49,8 +57,10 @@ fn main() {
         }
         
         i+=1;
-        if i == 2 { break; }
+        if i == 1 { break; }
     }
+
+    net.send_server(Comm::EndGame);
 
    /* game.play((1,1),(2,1));
     game.play((6,1),(5,1));
