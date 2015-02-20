@@ -73,8 +73,7 @@ impl Games {
     }
 
     fn find_game (&self, id:u64) -> Option<Eid> {
-        self.0.find(|g| { if g.id == id {Some(EntErr::Break)}
-                          else {None} })
+        self.0.first(|g| g.id == id)
     }
 }
 
