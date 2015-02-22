@@ -1,11 +1,13 @@
+#![feature(std_misc)]
+
 extern crate "rust-chess" as chess;
 use chess::{Game,Network,Inputs,Comm, Events,Event,PlayResult};
-use std::thread::Thread;
+use std::thread;
 
 fn main() {
     let mut game = Game::new();
 
-    Thread::spawn(move || {
+    thread::spawn(move || {
         let svr = Network::new_server();
     });
     
@@ -31,7 +33,10 @@ fn main() {
                         println!("{:?}",r);
                         match r {
                             PlayResult::Ok(_) | PlayResult::Check(_,_) => (), // todo: call renderer?
-                            _ => net.send_server(Comm::EndGame), //bad game, cheating?
+                            _ => {//bad game, cheating?
+                                net.send_server(Comm::EndGame);
+                                break 'gameloop;
+                            },
                         }
                     },
                     Comm::EndGame => break 'gameloop,

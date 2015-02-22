@@ -1,20 +1,19 @@
 extern crate wire;
 extern crate cubby;
+extern crate rand;
 
-use super::{Game,Position,Event,Player,Item};
-use std::thread::Thread;
+use super::{Position,Move,Event,Player,Item};
+use std::thread;
 use self::wire::{SizeLimit,tcp};
-use std::rand;
 
-use std::sync::mpsc::{channel,Receiver,Sender};
+use std::sync::mpsc::{Sender};
 
-//use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use self::cubby::{Ent,Eid, EntErr};
+use std::sync::{Arc};
+use self::cubby::{Ent,Eid};
 
 #[derive(Debug,RustcDecodable, RustcEncodable,Copy)]
 pub enum Comm {
-    Move(Position,Position), //from, to
+    Move(Position,Position), //from, to; todo: consider using lib's move
     StartGame(Option<u64>),
     EndGame,
     //Chat(String),
@@ -23,14 +22,14 @@ pub enum Comm {
 struct Players(Ent<tcp::OutTcpStream<Comm>>);
 impl Players {
     fn new () -> Players {
-        Players(Ent::new(2000))
+        Players(Ent::new(4000))
     }
 }
 
 struct NetGame {
     white: Option<Eid>,
     black: Option<Eid>,
-    moves: Vec<(Position,Position)>,
+    moves: Vec<Move>,
     id: u64, //consider removing? 
 }
 
@@ -49,7 +48,7 @@ impl Games {
 
     // todo: check for what side player should be on!
     /// currently returns the side they are on, and the last move played in the game
-    fn attach (&self, e: Eid, p:Eid) -> (Option<Player>,Option<(Position,Position)>) {
+    fn attach (&self, e: Eid, p:Eid) -> (Option<Player>,Option<Move>) {
         let mut last_move = None;
         let r = self.0.with_mut(e, |g| {
             last_move = g.moves.clone().pop();
@@ -107,7 +106,7 @@ impl Network {
             let _games = games.clone();
             let _players = players.clone();
 
-            Thread::spawn(move || {
+            thread::spawn(move || {
                 let (i, mut o) = wire::upgrade_tcp(conn,
                                                    SizeLimit::Bounded(1000),
                                                    SizeLimit::Bounded(1000));
@@ -165,7 +164,7 @@ impl Network {
 
         o.send(&Comm::StartGame(gid));
 
-        Thread::spawn(move || {
+        thread::spawn(move || {
             for n in i.into_blocking_iter() {
                 t.send(Event::Net(n));
             }

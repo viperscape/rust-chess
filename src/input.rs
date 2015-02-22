@@ -1,5 +1,5 @@
-use std::sync::mpsc::{channel,Sender,Receiver};
-use std::thread::Thread;
+use std::sync::mpsc::{Sender};
+use std::thread;
 use super::{Event};
 
 // ignore this, will be replaced by piston stuff
@@ -13,7 +13,7 @@ pub enum Inputs {
 
 impl Inputs {
     pub fn new (t: Sender<Event>) {
-        Thread::spawn(move || {
+        thread::spawn(move || {
             t.send(Event::Inp(Inputs::Mouse1));
         });
     }

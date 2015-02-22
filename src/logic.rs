@@ -1,3 +1,5 @@
+use super::{Position,Move};
+
 #[derive(Debug,Copy)]
 pub enum Item {
     Pawn,
@@ -23,7 +25,7 @@ pub enum MoveType {
     Upgrade, //consider calling this queen, since that's the upgrade for pawn
 }
 
-pub type Position = (usize,usize); //change to u8 when rust gets changed!
+
 fn abs (v: usize) -> usize { //wtf happened to std abs? also change to u8 soon
     let v = v as i32;
     if v < 0i32 {
@@ -168,10 +170,10 @@ impl Item {
 
         // heading down row or column?
         if from.0 != to.0 {
-            for n in range(from.0,to.0) { v.push((n,from.1)) }
+            for n in (from.0..to.0) { v.push((n,from.1)) }
         }
         else {
-            for n in range(from.1,to.1) { v.push((from.0,n)) }
+            for n in (from.1..to.1) { v.push((from.0,n)) }
         }
 
         v
@@ -186,7 +188,7 @@ impl Item {
         if from.0 > to.0 {tr -= 1;}
         else {tr += 1;}
 
-        for n in range(from.0,tr) {
+        for n in (from.0..tr) {
             v.push((n,m));
 
             //adjust column
@@ -258,7 +260,7 @@ impl Player {
     }
 
     /// special pathing for castling, returns tuple of new positions for (king,rook)
-    pub fn castle_path (&self, from:Position, to:Position) -> (Position,Position) {
+    pub fn castle_path (&self, from:Position, to:Position) -> Move {
         match *self {
             Player::Black(item) => {
                 match item {

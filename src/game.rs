@@ -1,4 +1,4 @@
-use super::{Player,Item,Position,MoveType};
+use super::{Player,Item,Position,MoveType,Move};
 
 pub type BoardLayout = [[Option<Player>;8];8];
 
@@ -150,14 +150,14 @@ impl Game {
                     },
                     MoveType::Double(pos) => { 
                         //swap in the enpass ghost
-                        match (player) {
+                        match player {
                             Player::White(_) => {self.swap_pos(pos,Some(Player::White(Item::EnPass(to))));},
                             Player::Black(_) => {self.swap_pos(pos,Some(Player::White(Item::EnPass(to))));},
                         }
                         self.swap_pos(from,None);
                     },
                     MoveType::Upgrade => {
-                        match (player) {
+                        match player {
                             Player::White(_) => {self.swap_pos(to,Some(Player::White(Item::Queen)));},
                             Player::Black(_) => {self.swap_pos(to,Some(Player::Black(Item::Queen)));},
                         }
@@ -214,7 +214,7 @@ impl Game {
                 if let Some(check) = rkme.1 { 
                     self.board = *_board; // swap back original board
                     if _cap.is_some() { self.captured.pop(); } //pop off captured player if needed
-                    return PlayResult::Check(check,rkme.0); 
+                    return PlayResult::Check(check,rkme.0);
                 }
                 else {
                     //flip active player
