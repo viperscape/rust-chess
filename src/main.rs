@@ -1,6 +1,22 @@
 #![feature(std_misc)]
 
 extern crate "rust-chess" as chess;
+
+//
+extern crate piston;
+extern crate shader_version;
+extern crate glutin_window;
+
+use std::cell::RefCell;
+use piston::quack::Set;
+use piston::window::{WindowSettings};
+use self::piston::input::keyboard::Key;
+
+
+use shader_version::OpenGL;
+use glutin_window::GlutinWindow as Window;
+//
+
 use chess::{Game,Network,Inputs,Comm, Events,Event,PlayResult};
 use std::thread;
 
@@ -10,13 +26,29 @@ fn main() {
     thread::spawn(move || {
         let svr = Network::new_server();
     });
-    
+
+
+//
+    let window = Window::new(
+        OpenGL::_3_2,
+        WindowSettings {
+            title: "piston-examples/user_input".to_string(),
+            size: [300, 300],
+            fullscreen: false,
+            exit_on_esc: true,
+            samples: 0,
+        }
+    );
+
+    let window = RefCell::new(window);
+//    
+
+
     let es = Events::new();
-    let inp = Inputs::new(es.branch());
+    let inp = Inputs::new(window, es.branch());
     let mut net = Network::new_client(None,es.branch());
     
 
-    let mut i = 0;
     'gameloop: for e in es {
         println!("{:?}",e);
         match e {
@@ -40,12 +72,13 @@ fn main() {
                         }
                     },
                     Comm::EndGame => break 'gameloop,
+                    Comm::Quit => break 'gameloop, //network thread shutdown
                 }
             },
             Event::Inp(inp) => {
                 match inp {
-                    Inputs::Mouse1 => {
-                        // todo: check if game is started and mouse1 corresponds to a move selection versus a manu selection!
+                    Inputs::Mouse(btn,pos) => {
+                        // todo: check if game is started and mouse-click corresponds to a move selection versus a menu selection!
                         
                         let mv = ((1,1),(2,1));
                         let r: PlayResult = game.play(mv.0,mv.1);
@@ -55,22 +88,24 @@ fn main() {
                             _ => (),
                         }
                     },
-                    _ => (),
+                    Inputs::Keyboard(key) => {
+                        match key {
+                            Key::Q => break 'gameloop,
+                            Key::M => println!("!"),
+                            _ => (),
+                        }
+                    },
+
+                    Inputs::Quit => break 'gameloop, //input thread shutdown
                 }
             },
             
         }
-        
-        i+=1;
-        if i == 1 { break; }
     }
-
-    net.send_server(Comm::EndGame);
 
    /* game.play((1,1),(2,1));
     game.play((6,1),(5,1));
     println!("valid move? {:?}",game.play((0,2),(2,0)));
     println!("{:?}",game);*/
 
-    
 }

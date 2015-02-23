@@ -20,9 +20,23 @@ git = "https://github.com/TyOverby/wire"
 rustc-serialize = "*"
 rand = "*"
 
+[dependencies.pistoncore-event]
+git = "https://github.com/PistonDevelopers/event"
+
 [dependencies.glium]
 git = "https://github.com/tomaka/glium"
 [dependencies.glutin]
 git = "https://github.com/tomaka/glutin"
 [dependencies.glium_macros]
 git = "https://github.com/tomaka/glium"
+
+
+
+[dependencies.piston]
+git = "https://github.com/PistonDevelopers/piston"
+
+[dependencies.pistoncore-glutin_window]
+git = "https://github.com/pistondevelopers/glutin_window"
+
+[dependencies.shader_version]
+git = "https://github.com/pistondevelopers/shader_version"

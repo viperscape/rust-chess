@@ -15,8 +15,9 @@ use self::cubby::{Ent,Eid};
 pub enum Comm {
     Move(Position,Position), //from, to; todo: consider using lib's move
     StartGame(Option<u64>),
-    EndGame,
+    EndGame, //game officially over
     //Chat(String),
+    Quit, //network is shutdown
 }
 
 struct Players(Ent<tcp::OutTcpStream<Comm>>);
@@ -149,7 +150,8 @@ impl Network {
                                 _games.0.remove(gid.unwrap());
                             }
                             break;
-                        }
+                        },
+                        _ => (),
                     }
                 }
             });
@@ -168,6 +170,7 @@ impl Network {
             for n in i.into_blocking_iter() {
                 t.send(Event::Net(n));
             }
+            t.send(Event::Net(Comm::Quit));
         });
 
         Network(o)
