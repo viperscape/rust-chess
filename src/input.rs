@@ -1,6 +1,6 @@
-use std::sync::mpsc::{Sender};
+use std::sync::mpsc::{Sender,Receiver};
 use std::thread;
-use super::{Event};
+use super::{Event,Render};
 use std::cell::RefCell;
 
 
@@ -32,7 +32,7 @@ pub enum Inputs {
 }
 
 impl Inputs {
-    pub fn new (window: RefCell<Window>, t: Sender<Event>) {
+    pub fn new (window: RefCell<Window>, render: Sender<Event>, t: Sender<Event>) {
         thread::spawn(move || {
             let mut mpos = None; //piston events are wiped on each event it seems, so store this outside the loop
             for e in piston::events(&window) {
@@ -45,6 +45,12 @@ impl Inputs {
                 }
                 if let Some(Button::Keyboard(key)) = e.release_args() {
                     t.send(Event::Inp(Inputs::Keyboard(key)));
+                };
+
+                e.resize(|w, h| render.send(Event::Gfx(Render::Resize(w,h))));
+                if let Some(focused) = e.focus_args() {
+                    if focused { render.send(Event::Gfx(Render::Step)); }
+                    else { render.send(Event::Gfx(Render::Pause)); }
                 };
 
                 e.render(|_| {});

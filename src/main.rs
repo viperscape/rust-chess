@@ -17,35 +17,33 @@ use shader_version::OpenGL;
 use glutin_window::GlutinWindow as Window;
 //
 
-use chess::{Game,Network,Inputs,Comm, Events,Event,PlayResult};
+use chess::{Game,Network,Inputs,Comm,Render, Events,Event,PlayResult};
 use std::thread;
 
 fn main() {
     let mut game = Game::new();
 
+    //spawn a loopback test server
     thread::spawn(move || {
         let svr = Network::new_server();
     });
 
 
-//
-    let window = Window::new(
-        OpenGL::_3_2,
-        WindowSettings {
-            title: "piston-examples/user_input".to_string(),
-            size: [300, 300],
-            fullscreen: false,
-            exit_on_esc: true,
-            samples: 0,
-        }
-    );
-
+    // setup window
+    let window = Window::new(OpenGL::_3_2,
+                             WindowSettings {
+                                 title: "rust-chess".to_string(),
+                                 size: [800, 600],
+                                 fullscreen: false,
+                                 exit_on_esc: true,
+                                 samples: 0,
+                             });
     let window = RefCell::new(window);
-//    
 
 
     let es = Events::new();
-    let inp = Inputs::new(window, es.branch());
+    let gfx = Render::new(es.branch());
+    let inp = Inputs::new(window, gfx, es.branch());
     let mut net = Network::new_client(None,es.branch());
     
 
@@ -99,7 +97,12 @@ fn main() {
                     Inputs::Quit => break 'gameloop, //input thread shutdown
                 }
             },
-            
+            Event::Gfx(rend) => {
+                match rend {
+                    Render::Quit => break 'gameloop, //gfx thread shutdown
+                    _ => (),
+                }
+            },
         }
     }
 

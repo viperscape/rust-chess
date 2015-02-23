@@ -1,5 +1,5 @@
 use std::sync::mpsc::{Receiver,Sender,channel};
-use super::{Inputs,Comm};
+use super::{Inputs,Comm,Render};
 
 
 pub struct Events {
@@ -32,4 +32,5 @@ impl Iterator for Events {
 pub enum Event {
     Net(Comm),
     Inp(Inputs),
+    Gfx(Render),
 }
