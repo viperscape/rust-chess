@@ -197,7 +197,6 @@ impl Item {
         if from.0 > to.0 {tr -= 1;}
         else {tr += 1;}
 
-        // todo:check for range decrementing
         rng (from.0,tr, |n| {
             v.push((n,m));
 
