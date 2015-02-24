@@ -1,64 +1,57 @@
 use std::sync::mpsc::{Sender,Receiver};
 use std::thread;
 use super::{Event,Render};
-use std::cell::RefCell;
 
-
-extern crate piston;
-use self::piston::input::{Button, MouseButton};
-use self::piston::input::keyboard::Key;
-use self::piston::event::{
-    PressEvent,
-    ReleaseEvent,
-    MouseCursorEvent,
-    MouseScrollEvent,
-    MouseRelativeEvent,
-    TextEvent,
-    ResizeEvent,
-    FocusEvent,
-    RenderEvent,
-    UpdateEvent
-};
-
-extern crate glutin_window;
-use self::glutin_window::GlutinWindow as Window;
-
+extern crate glutin;
+//use glutin::{ElementState,VirtualKeyCode,MouseButton};
 
 #[derive(Debug)]
 pub enum Inputs {
-    Keyboard(Key),
-    Mouse(MouseButton, (f64,f64)),
+    Key(glutin::VirtualKeyCode),
+    Click(glutin::MouseButton, (i32,i32)),
+    Drag((i32,i32)),
     Quit
 }
 
+/*pub trait Input<T,U> {
+    fn new (inpr: Receiver<T>, t: Sender<U>);
+}*/
+
+/// translates and collects glutin inputs
+/// glutin polling of events can glom events from other pollings
+/// so we send events to this thread, instead of cloning displays to poll for
+/// the output (t: Sender) is for a receiving game-loop
 impl Inputs {
-    pub fn new (window: RefCell<Window>, render: Sender<Event>, t: Sender<Event>) {
+    pub fn new (inpr: Receiver<glutin::Event>, t: Sender<Event>) {
         thread::spawn(move || {
-            let mut mpos = None; //piston events are wiped on each event it seems, so store this outside the loop
-            for e in piston::events(&window) {
-                e.mouse_cursor(|x, y| { mpos = Some((x,y)); }); 
-
-                if let Some(Button::Mouse(btn)) = e.release_args() {
-                    if let Some(xy) = mpos {
-                        t.send(Event::Inp(Inputs::Mouse(btn, xy)));
-                    }
+            let mut mpos: (i32,i32) = (0,0); 
+            for e in inpr.iter() {
+                match e {
+                    glutin::Event::MouseMoved(pos) => { mpos = pos; },
+                    glutin::Event::MouseInput(state, btn) => {
+                        match state {
+                            glutin::ElementState::Released => { 
+                                t.send(Event::Inp(Inputs::Click(btn,mpos))); 
+                            },
+                            _ => (),
+                        }
+                    },
+                    glutin::Event::KeyboardInput(state,_,vkey) => {
+                        match state {
+                            glutin::ElementState::Released => {
+                                if let Some(key) = vkey {
+                                    t.send(Event::Inp(Inputs::Key(key)));
+                                }
+                            },
+                            _ => (),
+                        }
+                    },
+                    glutin::Event::Closed => break,
+                    _ => (),
                 }
-                if let Some(Button::Keyboard(key)) = e.release_args() {
-                    t.send(Event::Inp(Inputs::Keyboard(key)));
-                };
-
-                e.resize(|w, h| render.send(Event::Gfx(Render::Resize(w,h))));
-                if let Some(focused) = e.focus_args() {
-                    if focused { render.send(Event::Gfx(Render::Step)); }
-                    else { render.send(Event::Gfx(Render::Pause)); }
-                };
-
-                e.render(|_| {});
-                e.update(|_| {});
             }
 
-            t.send(Event::Inp(Inputs::Quit));
-
+            t.send(Event::Inp(Inputs::Quit)); //tell main thread we're done
         });
     }
 }

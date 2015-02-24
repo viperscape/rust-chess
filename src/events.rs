@@ -33,4 +33,5 @@ pub enum Event {
     Net(Comm),
     Inp(Inputs),
     Gfx(Render),
+    //Quit, //generic quit event
 }

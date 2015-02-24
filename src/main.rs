@@ -1,21 +1,7 @@
 #![feature(std_misc)]
 
 extern crate "rust-chess" as chess;
-
-//
-extern crate piston;
-extern crate shader_version;
-extern crate glutin_window;
-
-use std::cell::RefCell;
-use piston::quack::Set;
-use piston::window::{WindowSettings};
-use self::piston::input::keyboard::Key;
-
-
-use shader_version::OpenGL;
-use glutin_window::GlutinWindow as Window;
-//
+extern crate glutin;
 
 use chess::{Game,Network,Inputs,Comm,Render, Events,Event,PlayResult};
 use std::thread;
@@ -29,21 +15,9 @@ fn main() {
     });
 
 
-    // setup window
-    let window = Window::new(OpenGL::_3_2,
-                             WindowSettings {
-                                 title: "rust-chess".to_string(),
-                                 size: [800, 600],
-                                 fullscreen: false,
-                                 exit_on_esc: true,
-                                 samples: 0,
-                             });
-    let window = RefCell::new(window);
-
-
     let es = Events::new();
-    let gfx = Render::new(es.branch());
-    let inp = Inputs::new(window, gfx, es.branch());
+    let (gfx,inp) = Render::new();
+    Inputs::new(inp, es.branch());
     let mut net = Network::new_client(None,es.branch());
     
 
@@ -70,12 +44,12 @@ fn main() {
                         }
                     },
                     Comm::EndGame => break 'gameloop,
-                    Comm::Quit => break 'gameloop, //network thread shutdown
+                    Comm::Quit => break 'gameloop, //network thread shutdown, for now just quit
                 }
             },
             Event::Inp(inp) => {
                 match inp {
-                    Inputs::Mouse(btn,pos) => {
+                    Inputs::Click(btn,pos) => {
                         // todo: check if game is started and mouse-click corresponds to a move selection versus a menu selection!
                         
                         let mv = ((1,1),(2,1));
@@ -86,25 +60,34 @@ fn main() {
                             _ => (),
                         }
                     },
-                    Inputs::Keyboard(key) => {
+                    Inputs::Key(key) => {
                         match key {
-                            Key::Q => break 'gameloop,
-                            Key::M => println!("!"),
+                            glutin::VirtualKeyCode::Q => {
+                                gfx.send(Render::Quit);
+                               // break 'gameloop;
+                            },
+                            glutin::VirtualKeyCode::Pause => { //todo: add state
+                                gfx.send(Render::Pause(true));
+                            },
+                            glutin::VirtualKeyCode::M => println!("!"),
                             _ => (),
                         }
                     },
-
+                    Inputs::Drag(pos) => (),
                     Inputs::Quit => break 'gameloop, //input thread shutdown
                 }
             },
-            Event::Gfx(rend) => {
-                match rend {
-                    Render::Quit => break 'gameloop, //gfx thread shutdown
-                    _ => (),
-                }
-            },
+            _ => (),
         }
     }
+
+    println!("shutting down main thread");
+    net.send_server(Comm::Quit);
+
+    
+    //gfx.send(Event::Quit);
+    //inp.send(Event::Quit);
+    //net.send(Event::Quit);
 
    /* game.play((1,1),(2,1));
     game.play((6,1),(5,1));

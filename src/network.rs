@@ -151,13 +151,15 @@ impl Network {
                             }
                             break;
                         },
-                        _ => (),
+                        Comm::Quit => {
+                            break;
+                        },
+                        //_ => (),
                     }
                 }
             });
         }
     }
-
 
     pub fn new_client (gid: Option<u64>, t: Sender<Event>) -> Network {
         let (i, mut o) = wire::connect_tcp(("localhost",9999),

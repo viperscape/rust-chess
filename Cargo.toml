@@ -15,10 +15,17 @@ git = "https://github.com/viperscape/cubby"
 
 [dependencies.wire]
 git = "https://github.com/TyOverby/wire"
+version = "0.0.9"
 
 [dependencies]
 rustc-serialize = "*"
 rand = "*"
+
+clock_ticks = "*"
+genmesh = "*"
+obj = "*"
+
+
 
 [dependencies.pistoncore-event]
 git = "https://github.com/PistonDevelopers/event"
@@ -40,3 +47,32 @@ git = "https://github.com/pistondevelopers/glutin_window"
 
 [dependencies.shader_version]
 git = "https://github.com/pistondevelopers/shader_version"
+
+
+
+[features]
+default = ["image", "cgmath", "nalgebra", "gl_read_buffer", "gl_depth_textures"]
+gl_read_buffer = []
+gl_uniform_blocks = []
+gl_sync = []
+gl_persistent_mapping = ["gl_sync"]
+gl_program_binary = []
+gl_tessellation = []
+gl_instancing = []
+gl_integral_textures = []
+gl_depth_textures = []
+gl_stencil_textures = []
+headless = ["glutin/headless"]
+
+
+[dependencies.cgmath]
+git = "https://github.com/bjz/cgmath-rs"
+optional = true
+
+[dependencies.nalgebra]
+git = "https://github.com/sebcrozet/nalgebra"
+optional = true
+
+[dependencies.image]
+git = "https://github.com/PistonDevelopers/image"
+optional = true
