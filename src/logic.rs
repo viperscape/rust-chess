@@ -1,3 +1,7 @@
+#![feature(core)]
+extern crate core;
+use self::core::num::Int;
+
 use super::{Position,Move};
 
 #[derive(Debug,Copy)]
@@ -26,7 +30,7 @@ pub enum MoveType {
     Upgrade, //consider calling this queen, since that's the upgrade for pawn
 }
 
-
+//convenience functions
 fn abs (v: usize) -> usize { //wtf happened to std abs? also change to u8 soon
     let v = v as i32;
     if v < 0i32 {
@@ -38,6 +42,10 @@ fn abs_pos (from:Position,to:Position) -> (usize,usize) {
     let r = abs(to.0 - from.0);
     let c = abs(to.1 - from.1);
     (r,c)
+}
+fn rng<T:PartialEq+Int, F:FnMut(T)> (d:T,dt:T,mut f:F) {
+    if d>dt { for n in (dt..d).rev() { f(n); } }
+    else { for n in (d..dt) { f(n); } }
 }
 
 impl Item {
@@ -170,12 +178,11 @@ impl Item {
         let mut v = Vec::new();
 
         // heading down row or column?
-        // todo:check for range decrementing
         if from.0 != to.0 {
-            for n in (from.0..to.0) { v.push((n,from.1)) }
+            rng (from.0,to.0, |n| { v.push((n,from.1)); });
         }
         else {
-            for n in (from.1..to.1) { v.push((from.0,n)) }
+            rng (from.1,to.1, |n| { v.push((from.0,n)); });
         }
 
         v
@@ -191,13 +198,13 @@ impl Item {
         else {tr += 1;}
 
         // todo:check for range decrementing
-        for n in (from.0..tr) {
+        rng (from.0,tr, |n| {
             v.push((n,m));
 
             //adjust column
             if from.1 > to.1 { m-=1; }
             else { m+=1; }
-        }
+        });
 
         v
     }
