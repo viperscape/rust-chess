@@ -3,7 +3,7 @@
 extern crate "rust-chess" as chess;
 extern crate glutin;
 
-use chess::{Game,Network,Inputs,Comm,Render, Events,Event,PlayResult};
+use chess::{Game,Network,Inputs,Comm,Render, Events,Event,MoveType,MoveIllegal,MoveValid};
 use std::thread;
 
 fn main() {
@@ -33,14 +33,15 @@ fn main() {
                         else { panic!("game already started!"); }
                     },
                     Comm::Move(f,to) => {
-                        let r: PlayResult = game.play(f,to);
+                        let r = game.play(f,to);
                         println!("{:?}",r);
-                        match r {
-                            PlayResult::Ok(_) | PlayResult::Check(_,_) => (), // todo: call renderer?
-                            _ => {//bad game, cheating?
+                        if r.is_ok() {
+                             // todo: call renderer?
+                        }
+                        else {
+                            //bad game, cheating?
                                 net.send_server(Comm::EndGame);
                                 break 'gameloop;
-                            },
                         }
                     },
                     Comm::EndGame => break 'gameloop,
@@ -52,12 +53,18 @@ fn main() {
                     Inputs::Click(btn,pos) => {
                         // todo: check if game is started and mouse-click corresponds to a move selection versus a menu selection!
                         
+                        //todo: map pixels to board locations
+
+                        //example move below
                         let mv = ((1,1),(2,1));
-                        let r: PlayResult = game.play(mv.0,mv.1);
+                        let r = game.play(mv.0,mv.1);
                         println!("{:?}",r);
-                        match r {
-                            PlayResult::Ok(_) | PlayResult::Check(_,_) => net.send_server(Comm::Move(mv.0,mv.1)),
-                            _ => (),
+                        if r.is_ok() {
+                             // todo: call renderer?
+                            net.send_server(Comm::Move(mv.0,mv.1));
+                        }
+                        else {
+                            // todo: call renderer?
                         }
                     },
                     Inputs::Key(key) => {
@@ -83,15 +90,4 @@ fn main() {
 
     println!("shutting down main thread");
     net.send_server(Comm::Quit);
-
-    
-    //gfx.send(Event::Quit);
-    //inp.send(Event::Quit);
-    //net.send(Event::Quit);
-
-   /* game.play((1,1),(2,1));
-    game.play((6,1),(5,1));
-    println!("valid move? {:?}",game.play((0,2),(2,0)));
-    println!("{:?}",game);*/
-
 }

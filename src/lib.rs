@@ -6,7 +6,7 @@ extern crate glutin;
 extern crate glium;
 
 
-pub use game::{Game,PlayResult};
+pub use game::{Game,MoveValid,MoveIllegal};
 pub use logic::{Player,Item,MoveType};
 pub use network::{Network,Comm};
 pub use input::{Inputs};
@@ -23,3 +23,4 @@ pub mod glium_support;
 
 pub type Position = (usize,usize); //change to u8 when rust gets changed!
 pub type Move = (Position,Position);
+pub type Capture = (Player,Position);

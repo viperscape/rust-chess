@@ -18,6 +18,7 @@ enum PawnMove {
 }
 
 // generic move types, needed at a higher level, so pass this back to Game
+#[derive(Debug,Copy)]
 pub enum MoveType {
     Regular,
     Castle, // rook or king castling

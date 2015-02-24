@@ -1,4 +1,4 @@
-use super::{Player,Item,Position,MoveType,Move};
+use super::{Player,Item,Position,MoveType,Move,Capture};
 
 pub type BoardLayout = [[Option<Player>;8];8];
 
@@ -67,7 +67,7 @@ impl Game {
         oldp
     }
 
-    pub fn play (&mut self, from:Position,to:Position) -> PlayResult {
+    pub fn play (&mut self, from:Position,to:Position) -> Result<MoveValid,MoveIllegal> {
         if let &Some(player) = self.get_player(from) { //must select an actual piece
 
             let _board = Box::new(self.board); //copy original board, to swap back to if needed
@@ -75,10 +75,11 @@ impl Game {
             //current active player is playing?
             match (player,self.active) {
                 (Player::White(_),Player::Black(_)) | 
-                (Player::Black(_),Player::White(_)) => return PlayResult::Illegal,
+                (Player::Black(_),Player::White(_)) => return Err(MoveIllegal::Invalid),
                 _ => (),
             }
 
+            // is play logically validated?
             if let Some(mt) = player.play_isvalid(from,to, self.capturing(from,to)) {
                 //only "to" other player's pieces, or nothing at all? unless castling!
                 if let &Some(oppo) = self.get_player(to) {
@@ -87,7 +88,7 @@ impl Game {
                         _ => {
                             match (player, oppo) {
                                 (Player::White(_),Player::White(_)) | 
-                                (Player::Black(_),Player::Black(_)) => return PlayResult::Illegal,
+                                (Player::Black(_),Player::Black(_)) => return Err(MoveIllegal::Invalid),
                                 _ => (),
                             }
                         }
@@ -99,12 +100,12 @@ impl Game {
                 let res = path.iter().find(|&n| self.get_player(*n).is_some());
 
                 if res.is_some() { //blocked
-                    return PlayResult::Blocked(*res.unwrap()) 
+                    return Err(MoveIllegal::Blocked(*res.unwrap()));
                 }
 
 
-
-                let _cap: Option<(Player,Position)>; //capture result to return
+                // determine capture
+                let _cap: Option<Capture>; //capture result to return
                 match mt {
                     MoveType::Castle => _cap = None,
                     _ => {
@@ -168,6 +169,7 @@ impl Game {
                     },
                 }
 
+
                 //must clear out all en passant ghost holders for opposing side, we had our chance
                 for r in self.board.iter_mut() {
                     for c in r.iter_mut() {
@@ -211,12 +213,12 @@ impl Game {
                     }
                 }
 
-                if let Some(check) = rkme.1 { 
+                if let Some(check) = rkme.1 { //put myself in check?
                     self.board = *_board; // swap back original board
                     if _cap.is_some() { self.captured.pop(); } //pop off captured player if needed
-                    return PlayResult::Check(check,rkme.0);
+                    return Err(MoveIllegal::Check(check,rkme.0));
                 }
-                else {
+                else { //move is totally valid
                     //flip active player
                     match self.active {
                         Player::Black(item) => {self.active = Player::White(item);},
@@ -225,17 +227,21 @@ impl Game {
 
                     if let Some(check) = rkthem.1 { 
                         self.check = Some(self.get_player(rkthem.0).unwrap());
-                        return PlayResult::Check(check,rkthem.0);
+                        return Ok(MoveValid { cap: _cap,
+                                              check: Some((check,rkthem.0)),
+                                              mt: mt });
                     }
                     else { 
                         self.check = None;
-                        return PlayResult::Ok(_cap); 
+                        return Ok(MoveValid { cap: _cap,
+                                              check: None,
+                                              mt: mt }); 
                     }
                 }
             }
         }
         
-        PlayResult::Invalid
+        Err(MoveIllegal::Invalid)
     }
 
     fn capturing (&self, from: Position, to: Position) -> bool {
@@ -304,12 +310,16 @@ impl Game {
 
 }
 
-//todo: consider combining invalid and illegal?
 #[derive(Debug)]
-pub enum PlayResult {
-    Ok(Option<(Player,Position)>),
+pub struct MoveValid {
+    cap: Option<Capture>,
+    check: Option<Move>, //from piece and to king
+    mt: MoveType,
+}
+
+#[derive(Debug)]
+pub enum MoveIllegal {
     Blocked(Position),
-    Invalid, //not a valid move, according to logic
-    Illegal, //a move that is valid, but not legal
     Check(Position,Position), //from piece and to king
+    Invalid, //not a valid move, according to logic
 }
