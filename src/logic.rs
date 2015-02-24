@@ -170,6 +170,7 @@ impl Item {
         let mut v = Vec::new();
 
         // heading down row or column?
+        // todo:check for range decrementing
         if from.0 != to.0 {
             for n in (from.0..to.0) { v.push((n,from.1)) }
         }
@@ -189,6 +190,7 @@ impl Item {
         if from.0 > to.0 {tr -= 1;}
         else {tr += 1;}
 
+        // todo:check for range decrementing
         for n in (from.0..tr) {
             v.push((n,m));
 

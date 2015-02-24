@@ -5,6 +5,10 @@ extern crate glutin;
 
 use chess::{Game,Network,Inputs,Comm,Render, Events,Event,MoveType,MoveIllegal,MoveValid};
 use std::thread;
+use glutin::VirtualKeyCode as VKey;
+
+use std::old_io::timer::sleep;
+use std::time::Duration;
 
 fn main() {
     let mut game = Game::new();
@@ -30,18 +34,18 @@ fn main() {
                         if !game.is_started(){
                             game.start(g.unwrap());
                         }
-                        else { panic!("game already started!"); }
+                        //else { break 'gameloop; }
                     },
                     Comm::Move(f,to) => {
                         let r = game.play(f,to);
                         println!("{:?}",r);
                         if r.is_ok() {
-                             // todo: call renderer?
+                            gfx.send(Render::Animate(r.unwrap()));
                         }
                         else {
                             //bad game, cheating?
-                                net.send_server(Comm::EndGame);
-                                break 'gameloop;
+                            net.send_server(Comm::EndGame);
+                            break 'gameloop;
                         }
                     },
                     Comm::EndGame => break 'gameloop,
@@ -53,14 +57,14 @@ fn main() {
                     Inputs::Click(btn,pos) => {
                         // todo: check if game is started and mouse-click corresponds to a move selection versus a menu selection!
                         
-                        //todo: map pixels to board locations
+                        // todo: map pixels to board locations
 
                         //example move below
                         let mv = ((1,1),(2,1));
                         let r = game.play(mv.0,mv.1);
                         println!("{:?}",r);
                         if r.is_ok() {
-                             // todo: call renderer?
+                            gfx.send(Render::Animate(r.unwrap()));
                             net.send_server(Comm::Move(mv.0,mv.1));
                         }
                         else {
@@ -69,14 +73,14 @@ fn main() {
                     },
                     Inputs::Key(key) => {
                         match key {
-                            glutin::VirtualKeyCode::Q => {
+                            VKey::Q => {
                                 gfx.send(Render::Quit);
-                               // break 'gameloop;
+                                // break 'gameloop;
                             },
-                            glutin::VirtualKeyCode::Pause => { //todo: add state
+                            VKey::Pause => { //todo: add state
                                 gfx.send(Render::Pause(true));
                             },
-                            glutin::VirtualKeyCode::M => println!("!"),
+                            VKey::M => println!("!"),
                             _ => (),
                         }
                     },
@@ -90,4 +94,7 @@ fn main() {
 
     println!("shutting down main thread");
     net.send_server(Comm::Quit);
+    gfx.send(Render::Quit);
+    //let threads die, otherwise glium can get hung up
+    sleep(Duration::milliseconds(2000));
 }

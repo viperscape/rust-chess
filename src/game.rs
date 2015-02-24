@@ -227,15 +227,19 @@ impl Game {
 
                     if let Some(check) = rkthem.1 { 
                         self.check = Some(self.get_player(rkthem.0).unwrap());
-                        return Ok(MoveValid { cap: _cap,
+                        return Ok(MoveValid { item: player,
+                                              cap: _cap,
                                               check: Some((check,rkthem.0)),
-                                              mt: mt });
+                                              mt: mt,
+                                              mv: (from,to) });
                     }
                     else { 
                         self.check = None;
-                        return Ok(MoveValid { cap: _cap,
+                        return Ok(MoveValid { item: player,
+                                              cap: _cap,
                                               check: None,
-                                              mt: mt }); 
+                                              mt: mt,
+                                              mv: (from,to) }); 
                     }
                 }
             }
@@ -310,14 +314,16 @@ impl Game {
 
 }
 
-#[derive(Debug)]
+#[derive(Debug,Copy)]
 pub struct MoveValid {
-    cap: Option<Capture>,
-    check: Option<Move>, //from piece and to king
-    mt: MoveType,
+    pub item: Player,
+    pub cap: Option<Capture>,
+    pub check: Option<Move>, //from piece and to king
+    pub mt: MoveType,
+    pub mv: Move, //from,to; for render
 }
 
-#[derive(Debug)]
+#[derive(Debug,Copy)]
 pub enum MoveIllegal {
     Blocked(Position),
     Check(Position,Position), //from piece and to king

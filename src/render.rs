@@ -6,25 +6,19 @@ use std::default::Default;
 
 use std::sync::mpsc::{channel,Sender,Receiver};
 use std::thread;
-use super::{Event,Position,glium_support};
+use super::{Event,Position, MoveType,MoveValid,Player,glium_support};
 
 
 
-#[derive(Debug)]
+#[derive(Debug,Copy)]
 pub enum Render {
     Quit,
     Pause(bool),
     Reset, // note: might be better to rebuild instead
-    Move(Position,Position), //from,to
-    
+    Animate(MoveValid), //perhaps include the Err results too? for visual feedback
 }
 
 impl Render {
-
-    pub fn stop(&self) {
-        // post glutin::Closed to events
-    }
-
     pub fn new() -> (Sender<Render>,Receiver<glutin::Event>) {
         let (inpt,inpr) = channel();
         let (gfxt,gfxr) = channel();
@@ -95,11 +89,17 @@ impl Render {
                 }
 
                 //poll for render commands from main thread
-                let rc = gfxr.try_recv();
-                if rc.is_ok() {
-                    match rc.unwrap() {
-                        Render::Quit => return glium_support::Action::Stop, //note: we must drop the display manually now!
-                        _ => (),
+                if !paused {
+                    let rc = gfxr.try_recv();
+                    if rc.is_ok() {
+                        match rc.unwrap() {
+                            Render::Quit => return glium_support::Action::Stop, //note: we must drop the display manually now!
+                            Render::Pause(p) => {
+                                paused = p;
+                            },
+                            Render::Reset => (),
+                            _ => Render::render_cmd(rc.unwrap()),
+                        }
                     }
                 }
 
@@ -110,6 +110,25 @@ impl Render {
             drop(display); //this prevents a weird bug since I'm threading and closing the display from outside the context; see Quit above
         });
         (gfxt,inpr)
+    }
+
+    fn render_cmd(rc: Render) {
+        match rc {
+            Render::Animate(mv) => {
+                if let Some(cap) = mv.cap { };
+                if let Some(check) = mv.check {};
+                match mv.mt {
+                    MoveType::Regular | MoveType::Double(_) => {
+                        println!("{:?}",mv.item.play_path(mv.mv.0,mv.mv.1));
+                    },
+                    MoveType::Castle => {
+                        println!("{:?}",mv.item.castle_path(mv.mv.0,mv.mv.1));
+                    },
+                    MoveType::Upgrade => (),
+                }
+            },
+            _ => (),
+        }
     }
 }
 
