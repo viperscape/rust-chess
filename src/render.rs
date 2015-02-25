@@ -16,10 +16,11 @@ pub enum Render {
     Pause(bool),
     Reset, // note: might be better to rebuild instead
     Animate(MoveValid), //perhaps include the Err results too? for visual feedback
+    RotateScene((i32,i32)), //comes from input's drag
 }
 
 impl Render {
-    pub fn new() -> (Sender<Render>,Receiver<glutin::Event>) {
+    pub fn new() -> (Sender<Vec<Render>>,Receiver<glutin::Event>) {
         let (inpt,inpr) = channel();
         let (gfxt,gfxr) = channel();
 
@@ -112,13 +113,15 @@ impl Render {
                 if !paused {
                     let rc = gfxr.try_recv();
                     if rc.is_ok() {
-                        match rc.unwrap() {
-                            Render::Quit => return glium_support::Action::Stop, //note: we must drop the display manually now!
-                            Render::Pause(p) => {
-                                paused = p;
-                            },
-                            Render::Reset => (),
-                            _ => Render::render_cmd(rc.unwrap()),
+                        for n in rc.unwrap() {
+                            match n {
+                                Render::Quit => return glium_support::Action::Stop, //note: we must drop the display manually now!
+                                Render::Pause(p) => {
+                                    paused = p;
+                                },
+                                Render::Reset => (),
+                                _ => Render::render_cmd(n),
+                            }
                         }
                     }
                 }

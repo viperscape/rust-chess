@@ -24,7 +24,9 @@ fn main() {
     let (gfx,inp) = Render::new();
     Inputs::new(inp, es.branch());
     let mut net = Network::new_client(None,es.branch());
-    
+
+
+    let mut rc: Vec<Render> = vec!(); //let's us batch render commands together
 
     'gameloop: for e in es {
         println!("{:?}",e);
@@ -41,7 +43,7 @@ fn main() {
                         let r = game.play(f,to);
                         println!("{:?}",r);
                         if r.is_ok() {
-                            gfx.send(Render::Animate(r.unwrap()));
+                            rc.push(Render::Animate(r.unwrap()));
                         }
                         else {
                             //bad game, cheating?
@@ -65,7 +67,7 @@ fn main() {
                         let r = game.play(mv.0,mv.1);
                         println!("{:?}",r);
                         if r.is_ok() {
-                            gfx.send(Render::Animate(r.unwrap()));
+                            rc.push(Render::Animate(r.unwrap()));
                             net.send_server(Comm::Move(mv.0,mv.1));
                         }
                         else {
@@ -75,11 +77,11 @@ fn main() {
                     Inputs::Key(key) => {
                         match key {
                             VKey::Q => {
-                                gfx.send(Render::Quit);
+                                gfx.send(vec!(Render::Quit));
                                 // break 'gameloop;
                             },
                             VKey::Pause => { //todo: add state
-                                gfx.send(Render::Pause(true));
+                                gfx.send(vec!(Render::Pause(true)));
                             },
                             VKey::M => println!("!"),
                             _ => (),
@@ -91,11 +93,14 @@ fn main() {
             },
             _ => (),
         }
+
+        gfx.send(rc);
+        rc = vec!();
     }
 
     println!("shutting down main thread");
     net.send_server(Comm::Quit);
-    gfx.send(Render::Quit);
+    gfx.send(vec!(Render::Quit));
     //let threads die, otherwise glium can get hung up
     sleep(Duration::milliseconds(2000));
 }
