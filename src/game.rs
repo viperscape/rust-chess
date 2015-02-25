@@ -1,6 +1,4 @@
-use super::{Player,Item,Position,MoveType,Move,Capture};
-
-pub type BoardLayout = [[Option<Player>;8];8];
+use super::{Player,Item,Position,MoveType,Move,Capture,BoardLayout};
 
 #[derive(Debug)]
 pub struct Game {
@@ -12,7 +10,7 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new() -> Game  {
+    pub fn build_board() -> BoardLayout{
         let mut board = [[None;8];8];
 
         //setup pawns row
@@ -37,6 +35,12 @@ impl Game {
                     Some(Player::Black(Item::Bishop)),
                     Some(Player::Black(Item::Knight)),
                     Some(Player::Black(Item::Rook(false)))];
+
+        board
+    }
+
+    pub fn new() -> Game  {
+        let board = Game::build_board();
         Game { board:board, captured:Vec::new(), 
                active: Player::White(Item::Pawn),
                check: None,

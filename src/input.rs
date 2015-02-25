@@ -1,6 +1,6 @@
 use std::sync::mpsc::{Sender,Receiver};
 use std::thread;
-use super::{Event,Render};
+use super::{Event};
 
 extern crate glutin;
 //use glutin::{ElementState,VirtualKeyCode,MouseButton};

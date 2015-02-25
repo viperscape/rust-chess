@@ -1,4 +1,8 @@
 #![feature(std_misc)]
+#![feature(core)]
+#![feature(old_io)]
+
+
 extern crate "rustc-serialize" as rustc_serialize;
 
 extern crate glutin;
@@ -24,3 +28,4 @@ pub mod glium_support;
 pub type Position = (usize,usize); //change to u8 when rust gets changed!
 pub type Move = (Position,Position);
 pub type Capture = (Player,Position);
+pub type BoardLayout = [[Option<Player>;8];8];

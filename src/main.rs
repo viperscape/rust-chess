@@ -1,9 +1,10 @@
 #![feature(std_misc)]
+#![feature(old_io)]
 
 extern crate "rust-chess" as chess;
 extern crate glutin;
 
-use chess::{Game,Network,Inputs,Comm,Render, Events,Event,MoveType,MoveIllegal,MoveValid};
+use chess::{Game,Network,Inputs,Comm,Render, Events,Event};
 use std::thread;
 use glutin::VirtualKeyCode as VKey;
 

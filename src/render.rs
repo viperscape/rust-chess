@@ -6,7 +6,7 @@ use std::default::Default;
 
 use std::sync::mpsc::{channel,Sender,Receiver};
 use std::thread;
-use super::{Event,Position, MoveType,MoveValid,Player,glium_support};
+use super::{Game,BoardLayout,Event,Position, MoveType,MoveValid,Player,glium_support};
 
 
 
@@ -34,12 +34,34 @@ impl Render {
             // building the vertex and index buffers
             let vertex_buffer = glium_support::load_wavefront(&display, include_bytes!("data/teapot.obj"));
 
+            // building the instances buffer
+            let per_instance = {
+                #[derive(Copy)]
+                struct Attr {
+                    world_position: [f32; 3],
+                }
+
+                implement_vertex!(Attr, world_position);
+
+                let mut data = Vec::new();
+                for x in (0u32 .. 8) {
+                    //for y in (0u32 .. 82) {
+                        data.push(Attr {
+                            world_position: [(x*100) as f32, 0 as f32, (x*100) as f32],
+                        });
+                    //}
+                }
+
+                glium::vertex::PerInstanceAttributesBuffer::new_if_supported(&display, data).unwrap()
+            };
+
+
             // the program
             let program = glium::Program::from_source(&display,
                                                       // vertex shader
-                                                      vert_sh,
+                                                      VERT_SH,
                                                       // fragment shader
-                                                      frag_sh,
+                                                      FRAG_SH,
                                                       // geometry shader
                                                       None).unwrap();
 
@@ -50,12 +72,10 @@ impl Render {
 
                 // building the uniforms
                 let uniforms = uniform! {
-                    matrix: [
-                        [0.005, 0.0, 0.0, 0.0],
-                        [0.0, 0.005, 0.0, 0.0],
-                        [0.0, 0.0, 0.005, 0.0],
-                        [0.0, 0.0, 0.0, 1.0f32]
-                            ]
+                    matrix: [[0.0005, 0.0, 0.0, 0.0],
+                             [0.0, 0.0005, 0.0, 0.0],
+                             [0.0, 0.0, 0.0005, 0.0],
+                             [0.0, 0.0, 0.0, 1.0f32]]
                 };
 
                 // draw parameters
@@ -68,7 +88,7 @@ impl Render {
 
                 let mut target = display.draw();
                 target.clear_color(0.0, 0.0, 0.0, 0.0);
-                target.draw(&vertex_buffer,
+                target.draw((&vertex_buffer, &per_instance),
                             &glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
                             &program, &uniforms, &params).unwrap();
                 target.finish();
@@ -132,19 +152,21 @@ impl Render {
     }
 }
 
-const vert_sh:&'static str =  "#version 110
+const VERT_SH:&'static str =  "#version 110
     uniform mat4 matrix;
     attribute vec3 position;
+    attribute vec3 world_position;
+
     attribute vec3 normal;
     varying vec3 v_position;
     varying vec3 v_normal;
     void main() {
-    v_position = position;
+    v_position = position + world_position;
     v_normal = normal;
     gl_Position = vec4(v_position, 1.0) * matrix;
             }";
 
-const frag_sh:&'static str = "#version 110
+const FRAG_SH:&'static str = "#version 110
     varying vec3 v_normal;
     const vec3 LIGHT = vec3(-0.2, 0.8, 0.1);
     void main() {

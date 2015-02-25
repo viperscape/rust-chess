@@ -1,4 +1,3 @@
-#![feature(core)]
 extern crate core;
 use self::core::num::Int;
 
