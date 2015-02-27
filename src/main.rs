@@ -102,5 +102,6 @@ fn main() {
     net.send_server(Comm::Quit);
     gfx.send(vec!(Render::Quit));
     //let threads die, otherwise glium can get hung up
+    //todo: consider joinguard on render-thread
     sleep(Duration::milliseconds(2000));
 }

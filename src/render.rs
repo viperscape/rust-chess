@@ -115,7 +115,7 @@ impl Render {
                     if rc.is_ok() {
                         for n in rc.unwrap() {
                             match n {
-                                Render::Quit => return glium_support::Action::Stop, //note: we must drop the display manually now!
+                                Render::Quit => return glium_support::Action::Stop,
                                 Render::Pause(p) => {
                                     paused = p;
                                 },
@@ -130,7 +130,6 @@ impl Render {
             });
 
             inpt.send(glutin::Event::Closed); //shutdown input
-            drop(display); //this prevents a weird bug since I'm threading and closing the display from outside the context; see Quit above
         });
         (gfxt,inpr)
     }
