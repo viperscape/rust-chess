@@ -3,4 +3,6 @@
 #*
 .#*
 *.bu
+*.blend
+*.blend1
 /Cargo.lock

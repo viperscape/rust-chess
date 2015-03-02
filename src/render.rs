@@ -3,7 +3,6 @@ extern crate glium;
 use glium::{Surface,DisplayBuild};
 use std::default::Default;
 
-
 use std::sync::mpsc::{channel,Sender,Receiver};
 use std::thread;
 use super::{Game,BoardLayout,Event,Position, MoveType,MoveValid,Player,glium_support};
@@ -30,10 +29,11 @@ impl Render {
             .unwrap();
         //let d2 = display.clone();
 
-        thread::spawn(move || {
+        //let guard = thread::scoped
+            thread::spawn(move || {
 
             // building the vertex and index buffers
-            let vertex_buffer = glium_support::load_wavefront(&display, include_bytes!("data/teapot.obj"));
+            let vertex_buffer = glium_support::load_wavefront(&display, include_bytes!("data/knight.obj")); 
 
             // building the instances buffer
             let per_instance = {
@@ -45,10 +45,11 @@ impl Render {
                 implement_vertex!(Attr, world_position);
 
                 let mut data = Vec::new();
-                for x in (0u32 .. 8) {
+                for x in (0u8 .. 1) {
                     //for y in (0u32 .. 82) {
                         data.push(Attr {
-                            world_position: [(x*100) as f32, 0 as f32, (x*100) as f32],
+                           // world_position: [(x*100) as f32, 0 as f32, (x*100) as f32],
+                            world_position: [0 as f32, -0.8 as f32, 0 as f32],
                         });
                     //}
                 }
@@ -73,9 +74,9 @@ impl Render {
 
                 // building the uniforms
                 let uniforms = uniform! {
-                    matrix: [[0.0005, 0.0, 0.0, 0.0],
-                             [0.0, 0.0005, 0.0, 0.0],
-                             [0.0, 0.0, 0.0005, 0.0],
+                    matrix: [[1.0, 0.0, 0.0, 0.0],
+                             [0.0, 1.0, 0.0, 0.0],
+                             [0.0, 0.0, 1.0, 0.0],
                              [0.0, 0.0, 0.0, 1.0f32]]
                 };
 
@@ -131,7 +132,7 @@ impl Render {
 
             inpt.send(glutin::Event::Closed); //shutdown input
         });
-        (gfxt,inpr)
+        (gfxt,inpr)//,guard)
     }
 
     fn render_cmd(rc: Render) {
@@ -170,7 +171,7 @@ const VERT_SH:&'static str =  "#version 110
 
 const FRAG_SH:&'static str = "#version 110
     varying vec3 v_normal;
-    const vec3 LIGHT = vec3(-0.2, 0.8, 0.1);
+    const vec3 LIGHT = vec3(-1.0, 3.0, 0.1);
     void main() {
     float lum = max(dot(normalize(v_normal), normalize(LIGHT)), 0.0);
     vec3 color = (0.3 + 0.7 * lum) * vec3(1.0, 1.0, 1.0);

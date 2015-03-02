@@ -108,9 +108,9 @@ impl Network {
             let _players = players.clone();
 
             thread::spawn(move || {
-                let (i, mut o) = wire::upgrade_tcp(conn,
-                                                   SizeLimit::Bounded(1000),
-                                                   SizeLimit::Bounded(1000));
+                let (i,o) = wire::upgrade_tcp((conn.0),
+                                          SizeLimit::Bounded(1000),
+                                          SizeLimit::Bounded(1000)).unwrap();
 
                 let mut gid: Option<Eid> = None;
                 let pid = _players.0.add(o).unwrap();
