@@ -43,7 +43,12 @@ impl Render {
             let cam = Render::cam_new();
 
             // building the vertex and index buffers
-            let vertex_buffer = glium_support::load_wavefront(&display, include_bytes!("data/queen.obj")); 
+            let queen_verts = glium_support::load_wavefront(&display, include_bytes!("data/queen.obj"));
+            let king_verts = glium_support::load_wavefront(&display, include_bytes!("data/king.obj")); 
+            let bishop_verts = glium_support::load_wavefront(&display, include_bytes!("data/bishop.obj"));
+            let knight_verts = glium_support::load_wavefront(&display, include_bytes!("data/knight.obj"));
+            let rook_verts = glium_support::load_wavefront(&display, include_bytes!("data/rook.obj"));
+            let pawn_verts = glium_support::load_wavefront(&display, include_bytes!("data/pawn.obj"));
 
             // building the instances buffer
             let per_instance = {
@@ -99,7 +104,11 @@ impl Render {
                 // drawing a frame
                 let mut target = display.draw();
                 target.clear_color_and_depth((0.0, 0.0, 0.0, 0.0), 1.0);
-                target.draw((&vertex_buffer, &per_instance),
+                target.draw((&king_verts, &per_instance),
+                            &glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
+                            &program, &uniforms, &params).unwrap();
+
+                target.draw((&pawn_verts, &per_instance),
                             &glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
                             &program, &uniforms, &params).unwrap();
                 target.finish();
