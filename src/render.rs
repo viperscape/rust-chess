@@ -7,6 +7,8 @@ use std::sync::mpsc::{channel,Sender,Receiver};
 use std::thread;
 use super::{Game,BoardLayout,Event,Position, MoveType,MoveValid,Player,glium_support};
 
+extern crate cam;
+use self::cam::{Camera,CameraPerspective};
 
 
 #[derive(Debug,Copy)]
@@ -19,21 +21,28 @@ pub enum Render {
 }
 
 impl Render {
-    pub fn new() -> (Sender<Vec<Render>>,Receiver<glutin::Event>) {
+    pub fn new(w:u32,h:u32) -> (Sender<Vec<Render>>,Receiver<glutin::Event>) {
         let (inpt,inpr) = channel();
         let (gfxt,gfxr) = channel();
 
         // building the display, ie. the main object
         let display = glutin::WindowBuilder::new()
+            .with_dimensions(w,h)
+            .with_title(format!("Chess"))
             .build_glium()
             .unwrap();
-        //let d2 = display.clone();
 
         //let guard = thread::scoped
-            thread::spawn(move || {
+        thread::spawn(move || {
+
+            //setup projection mat
+            let mut projection = Render::cam_proj(w,h);
+
+            //build cam
+            let cam = Render::cam_new();
 
             // building the vertex and index buffers
-            let vertex_buffer = glium_support::load_wavefront(&display, include_bytes!("data/knight.obj")); 
+            let vertex_buffer = glium_support::load_wavefront(&display, include_bytes!("data/queen.obj")); 
 
             // building the instances buffer
             let per_instance = {
@@ -46,12 +55,9 @@ impl Render {
 
                 let mut data = Vec::new();
                 for x in (0u8 .. 1) {
-                    //for y in (0u32 .. 82) {
-                        data.push(Attr {
-                           // world_position: [(x*100) as f32, 0 as f32, (x*100) as f32],
-                            world_position: [0 as f32, -0.8 as f32, 0 as f32],
-                        });
-                    //}
+                    data.push(Attr {
+                        world_position: [x as f32, 0 as f32, 0 as f32],
+                    });
                 }
 
                 glium::vertex::PerInstanceAttributesBuffer::new_if_supported(&display, data).unwrap()
@@ -77,7 +83,9 @@ impl Render {
                     matrix: [[1.0, 0.0, 0.0, 0.0],
                              [0.0, 1.0, 0.0, 0.0],
                              [0.0, 0.0, 1.0, 0.0],
-                             [0.0, 0.0, 0.0, 1.0f32]]
+                             [0.0, 0.0, 0.0, 1.0f32]],
+                    proj: projection,
+                    view: cam.orthogonal()
                 };
 
                 // draw parameters
@@ -87,7 +95,6 @@ impl Render {
                 };
 
                 // drawing a frame
-
                 let mut target = display.draw();
                 target.clear_color(0.0, 0.0, 0.0, 0.0);
                 target.draw((&vertex_buffer, &per_instance),
@@ -100,7 +107,9 @@ impl Render {
                 for event in display.poll_events() {
                     match event {
                         glutin::Event::Closed => return glium_support::Action::Stop,
-                        glutin::Event::Resized(w,h) => (),
+                        glutin::Event::Resized(w,h) => { 
+                            projection = Render::cam_proj(w,h);
+                        },
                         glutin::Event::Focused(focused) => {
                             if focused { paused = false; }
                             else { paused = true; }
@@ -153,27 +162,51 @@ impl Render {
             _ => (),
         }
     }
+
+    fn cam_new() -> Camera {
+        let v = [5f32,4f32,-8f32];
+        let mut cam = Camera::new(v);
+        cam.look_at([0f32,0f32,0f32]);
+        cam
+    }
+
+    fn cam_proj(w:u32,h:u32) -> [[f32;4];4] {
+        CameraPerspective {
+            fov: 60.0f32,
+            near_clip: 0.1,
+            far_clip: 250.0,
+            aspect_ratio: (w as f32) / (h as f32)
+        }.projection()
+    }
 }
+
+
 
 const VERT_SH:&'static str =  "#version 110
     uniform mat4 matrix;
+    uniform mat4 view;
+    uniform mat4 proj;
+
     attribute vec3 position;
     attribute vec3 world_position;
-
     attribute vec3 normal;
+
     varying vec3 v_position;
     varying vec3 v_normal;
+
     void main() {
-    v_position = position + world_position;
+    v_position = position;
     v_normal = normal;
-    gl_Position = vec4(v_position, 1.0) * matrix;
+    gl_Position = proj * view * matrix * vec4(v_position, 1.0);
             }";
 
 const FRAG_SH:&'static str = "#version 110
+    varying vec3 v_position;
     varying vec3 v_normal;
-    const vec3 LIGHT = vec3(-1.0, 3.0, 0.1);
+    const vec3 LIGHT = vec3(-1.0, 5.0, 0.1);
     void main() {
-    float lum = max(dot(normalize(v_normal), normalize(LIGHT)), 0.0);
+    float lum = max(dot(normalize(v_normal), normalize(LIGHT - v_position)), 0.0);
     vec3 color = (0.3 + 0.7 * lum) * vec3(1.0, 1.0, 1.0);
     gl_FragColor = vec4(color, 1.0);
             }";
+

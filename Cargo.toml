@@ -23,6 +23,9 @@ clock_ticks = "*"
 genmesh = "*"
 obj = "*"
 
+[dependencies.piston3d-cam]
+git = "https://github.com/PistonDevelopers/cam"
+
 [dependencies.glium]
 git = "https://github.com/tomaka/glium"
 [dependencies.glutin]

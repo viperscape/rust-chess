@@ -21,7 +21,7 @@ fn main() {
 
 
     let es = Events::new();
-    let (gfx,inp) = Render::new();
+    let (gfx,inp) = Render::new(1024, 768);
     Inputs::new(inp, es.branch());
     let mut net = Network::new_client(None,es.branch());
 
