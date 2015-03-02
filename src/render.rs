@@ -29,6 +29,7 @@ impl Render {
         let display = glutin::WindowBuilder::new()
             .with_dimensions(w,h)
             .with_title(format!("Chess"))
+            .with_depth_buffer(24)
             .build_glium()
             .unwrap();
 
@@ -90,13 +91,14 @@ impl Render {
 
                 // draw parameters
                 let params = glium::DrawParameters {
-                    //depth_function: glium::DepthFunction::IfLess,
+                    depth_test: glium::DepthTest::IfLess,
+                    depth_write: true,
                     .. Default::default()
                 };
 
                 // drawing a frame
                 let mut target = display.draw();
-                target.clear_color(0.0, 0.0, 0.0, 0.0);
+                target.clear_color_and_depth((0.0, 0.0, 0.0, 0.0), 1.0);
                 target.draw((&vertex_buffer, &per_instance),
                             &glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
                             &program, &uniforms, &params).unwrap();
@@ -164,7 +166,7 @@ impl Render {
     }
 
     fn cam_new() -> Camera {
-        let v = [5f32,4f32,-8f32];
+        let v = [5f32,4f32,8f32];
         let mut cam = Camera::new(v);
         cam.look_at([0f32,0f32,0f32]);
         cam
@@ -205,7 +207,7 @@ const FRAG_SH:&'static str = "#version 110
     varying vec3 v_normal;
     const vec3 LIGHT = vec3(-1.0, 5.0, 0.1);
     void main() {
-    float lum = max(dot(normalize(v_normal), normalize(LIGHT - v_position)), 0.0);
+    float lum = max(dot(normalize(v_normal), normalize(LIGHT-v_position)), 0.0);
     vec3 color = (0.3 + 0.7 * lum) * vec3(1.0, 1.0, 1.0);
     gl_FragColor = vec4(color, 1.0);
             }";
