@@ -47,6 +47,10 @@ impl Game {
                id: 0 }
     }
 
+    pub fn view(&self) -> BoardLayout {
+        self.board
+    }
+
     pub fn start (&mut self, id:u64) {
         self.id = id;
     }

@@ -3,7 +3,7 @@ use self::core::num::Int;
 
 use super::{Position,Move};
 
-#[derive(Debug,Copy)]
+#[derive(Debug,Copy,Hash,Eq,PartialEq)]
 pub enum Item {
     Pawn,
     King(bool),

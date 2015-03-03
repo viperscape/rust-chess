@@ -4,7 +4,7 @@
 extern crate "rust-chess" as chess;
 extern crate glutin;
 
-use chess::{Game,Network,Inputs,Comm,Render, Events,Event};
+use chess::{Item,Game,Network,Inputs,Comm,Render, Events,Event};
 use std::thread;
 use glutin::VirtualKeyCode as VKey;
 
@@ -21,7 +21,7 @@ fn main() {
 
 
     let es = Events::new();
-    let (gfx,inp) = Render::new(1024, 768);
+    let (gfx,inp) = Render::new(1024, 768, game.view());
     Inputs::new(inp, es.branch());
     let mut net = Network::new_client(None,es.branch());
 

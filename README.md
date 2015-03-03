@@ -21,3 +21,5 @@ println!("{:?}",game); //prints out current gameboard layout
 ```
 
 [detailed example](https://github.com/viperscape/rust-chess/blob/master/src/main.rs)
+
+![Image of Chess Game](https://github.com/viperscape/rust-chess/blob/master/chess_ss.png)

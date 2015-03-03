@@ -3,13 +3,20 @@ extern crate glium;
 use glium::{Surface,DisplayBuild};
 use std::default::Default;
 
+use std::cell::RefCell;
+
 use std::sync::mpsc::{channel,Sender,Receiver};
 use std::thread;
-use super::{Game,BoardLayout,Event,Position, MoveType,MoveValid,Player,glium_support};
+use super::{Game,BoardLayout,Event,Position, MoveType,MoveValid,Player, Item,glium_support};
 
 extern crate cam;
 use self::cam::{Camera,CameraPerspective};
 
+extern crate image;
+use std::old_io::BufReader;
+
+use std::collections::HashMap;
+use glium::vertex::VertexBufferAny;
 
 #[derive(Debug,Copy)]
 pub enum Render {
@@ -21,7 +28,7 @@ pub enum Render {
 }
 
 impl Render {
-    pub fn new(w:u32,h:u32) -> (Sender<Vec<Render>>,Receiver<glutin::Event>) {
+    pub fn new(w:u32,h:u32, board:BoardLayout) -> (Sender<Vec<Render>>,Receiver<glutin::Event>) {
         let (inpt,inpr) = channel();
         let (gfxt,gfxr) = channel();
 
@@ -36,63 +43,101 @@ impl Render {
         //let guard = thread::scoped
         thread::spawn(move || {
 
+            let img_lt = image::load(BufReader::new(include_bytes!("data/img_lt.png")),
+                                    image::PNG).unwrap();
+            let img_drk = image::load(BufReader::new(include_bytes!("data/img_drk.png")),
+                                     image::PNG).unwrap();
+            let tex_lt = glium::texture::CompressedTexture2d::new(&display, img_lt);
+            let tex_drk = glium::texture::CompressedTexture2d::new(&display, img_drk);
+
             //setup projection mat
-            let mut projection = Render::cam_proj(w,h);
+            let mut proj = Render::cam_proj(w,h);
 
             //build cam
-            let cam = Render::cam_new();
+            let mut cam = Render::cam_new();
 
             // building the vertex and index buffers
-            let queen_verts = glium_support::load_wavefront(&display, include_bytes!("data/queen.obj"));
-            let king_verts = glium_support::load_wavefront(&display, include_bytes!("data/king.obj")); 
-            let bishop_verts = glium_support::load_wavefront(&display, include_bytes!("data/bishop.obj"));
-            let knight_verts = glium_support::load_wavefront(&display, include_bytes!("data/knight.obj"));
-            let rook_verts = glium_support::load_wavefront(&display, include_bytes!("data/rook.obj"));
-            let pawn_verts = glium_support::load_wavefront(&display, include_bytes!("data/pawn.obj"));
+            let mut items: HashMap<Item,VertexBufferAny> = HashMap::new();
+            let get_vbo = |bs| glium_support::load_wavefront(&display, bs);
+            
+            items.insert(Item::Queen,get_vbo(include_bytes!("data/queen.obj")));
+            items.insert(Item::King(false),get_vbo(include_bytes!("data/king.obj")));
+            items.insert(Item::Rook(false),get_vbo(include_bytes!("data/rook.obj")));
+            items.insert(Item::King(true),get_vbo(include_bytes!("data/king.obj"))); //need both, peq is picky/accurate
+            items.insert(Item::Rook(true),get_vbo(include_bytes!("data/rook.obj")));
+            items.insert(Item::Bishop,get_vbo(include_bytes!("data/bishop.obj")));
+            items.insert(Item::Knight,get_vbo(include_bytes!("data/knight.obj")));
+            items.insert(Item::Pawn,get_vbo(include_bytes!("data/pawn.obj")));
 
-            // building the instances buffer
-            let per_instance = {
+            let item_inst = {
                 #[derive(Copy)]
                 struct Attr {
-                    world_position: [f32; 3],
+                    inst_position: [f32; 3],
+                    inst_color: f32,
                 }
+                implement_vertex!(Attr, inst_position, inst_color);
+                let mut data: Vec<Attr> = Vec::new();
+                data.push(Attr {
+                    inst_position: [0 as f32, 0f32, 0 as f32],
+                    inst_color: 1.0f32,
+                });
+                glium::vertex::PerInstanceAttributesBuffer::new_if_supported(&display, data).unwrap()
+            };
 
-                implement_vertex!(Attr, world_position);
+            let tile_verts = glium_support::load_wavefront(&display, include_bytes!("data/tile.obj"));
+            let board_inst = {
+                #[derive(Copy)]
+                struct Attr {
+                    inst_position: [f32; 3],
+                    inst_color: f32,
+                }
+                implement_vertex!(Attr, inst_position, inst_color);
 
-                let mut data = Vec::new();
-                for x in (0u8 .. 1) {
-                    data.push(Attr {
-                        world_position: [x as f32, 0 as f32, 0 as f32],
-                    });
+                let mut data: Vec<Attr> = Vec::new();
+                for (x,_) in board.iter().enumerate() { 
+                    for (z,_) in board.iter().enumerate() {
+                        let mut color = 1.0f32;
+                        if x % 2 == 1 && z % 2 == 1 ||
+                            x % 2 == 0 && z % 2 == 0 { color = 0.0f32; }
+
+                        data.push(Attr {
+                            inst_position: [(x*2) as f32, 0f32, (z*2) as f32],
+                            inst_color: color,
+                        });
+                    }
                 }
 
                 glium::vertex::PerInstanceAttributesBuffer::new_if_supported(&display, data).unwrap()
             };
 
 
-            // the program
-            let program = glium::Program::from_source(&display,
-                                                      // vertex shader
-                                                      VERT_SH,
-                                                      // fragment shader
-                                                      FRAG_SH,
-                                                      // geometry shader
-                                                      None).unwrap();
+
+            let prog_board = glium::Program::from_source(&display,
+                                                         VERT_SH_BOARD,
+                                                         FRAG_SH,
+                                                         None).unwrap();
+
+            let prog_item = glium::Program::from_source(&display,
+                                                        VERT_SH_ITEM,
+                                                        FRAG_SH,
+                                                        None).unwrap();
 
 
+            // identity matrix for model
+            // todo: build one for each piece, or use instancing
+            let model = [[1.0, 0.0, 0.0, 0.0],
+                         [0.0, 1.0, 0.0, 0.0],
+                         [0.0, 0.0, 1.0, 0.0],
+                         [0.0, 0.0, 0.0, 1.0f32]];
+
+            
+
+            let mut paused = false;
+            
             // the main loop
             glium_support::start_loop(|| {
-                let mut paused = false;
-
-                // building the uniforms
-                let uniforms = uniform! {
-                    matrix: [[1.0, 0.0, 0.0, 0.0],
-                             [0.0, 1.0, 0.0, 0.0],
-                             [0.0, 0.0, 1.0, 0.0],
-                             [0.0, 0.0, 0.0, 1.0f32]],
-                    proj: projection,
-                    view: cam.orthogonal()
-                };
+              //  cam.look_at([0f32,0f32,0f32]);
+                let view = cam.orthogonal();
 
                 // draw parameters
                 let params = glium::DrawParameters {
@@ -104,14 +149,59 @@ impl Render {
                 // drawing a frame
                 let mut target = display.draw();
                 target.clear_color_and_depth((0.0, 0.0, 0.0, 0.0), 1.0);
-                target.draw((&king_verts, &per_instance),
-                            &glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
-                            &program, &uniforms, &params).unwrap();
 
-                target.draw((&pawn_verts, &per_instance),
+                // draw board
+                let uniform = uniform! { model: model,
+                                         proj: proj,
+                                         view: view,
+                                         tex_lt: &tex_lt,
+                                         tex_drk: &tex_drk };
+
+                target.draw((&tile_verts, &board_inst),
                             &glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
-                            &program, &uniforms, &params).unwrap();
+                            &prog_board, &uniform, &params).unwrap();
+
+
+
+                // draw pieces
+                for (x,n) in board.iter().enumerate() { 
+                    for (z,p) in n.iter().enumerate() { 
+                        let mut color = 1.0f32;
+                        /*let model = [[1.0, 0.0, 0.0, 0.0],
+                                     [0.0, 1.0, 0.0, 0.0],
+                                     [0.0, 0.0, 1.0, 0.0],
+                                     [0.0, 0.0, 0.0, 1.0f32]];*/
+
+                        let uniform = uniform! { model: model,
+                                                 proj: proj,
+                                                 view: view,
+                                                 tex_lt: &tex_lt,
+                                                 tex_drk: &tex_drk,
+                                                 col: color,
+                                                 npos: [(x*2) as f32, 0.5f32, (z*2) as f32] }; 
+
+                        if let Some(_p) = *p {
+                            let r = match _p {
+                                Player::White(i) => {
+                                    color = 1.0f32;
+                                    items.get(&i)
+                                },
+                                Player::Black(i) => {
+                                    color = 0.0f32;
+                                    items.get(&i)
+                                }
+                            };
+
+                            target.draw(r.unwrap(),
+                                        &glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
+                                        &prog_item, &uniform, &params).unwrap();
+                        }
+                    }
+                }
+                
                 target.finish();
+
+
 
 
                 // polling and handling the events received by the window
@@ -119,7 +209,7 @@ impl Render {
                     match event {
                         glutin::Event::Closed => return glium_support::Action::Stop,
                         glutin::Event::Resized(w,h) => { 
-                            projection = Render::cam_proj(w,h);
+                            proj = Render::cam_proj(w,h);
                         },
                         glutin::Event::Focused(focused) => {
                             if focused { paused = false; }
@@ -155,6 +245,7 @@ impl Render {
         (gfxt,inpr)//,guard)
     }
 
+
     fn render_cmd(rc: Render) {
         match rc {
             Render::Animate(mv) => {
@@ -175,9 +266,9 @@ impl Render {
     }
 
     fn cam_new() -> Camera {
-        let v = [5f32,4f32,8f32];
+        let v = [25f32,8f32,20f32];
         let mut cam = Camera::new(v);
-        cam.look_at([0f32,0f32,0f32]);
+        cam.look_at([12f32,0f32,12f32]);
         cam
     }
 
@@ -185,7 +276,7 @@ impl Render {
         CameraPerspective {
             fov: 60.0f32,
             near_clip: 0.1,
-            far_clip: 250.0,
+            far_clip: 1000.0,
             aspect_ratio: (w as f32) / (h as f32)
         }.projection()
     }
@@ -193,31 +284,70 @@ impl Render {
 
 
 
-const VERT_SH:&'static str =  "#version 110
-    uniform mat4 matrix;
+const VERT_SH_BOARD:&'static str =  "#version 110
+    uniform mat4 model;
     uniform mat4 view;
     uniform mat4 proj;
 
     attribute vec3 position;
-    attribute vec3 world_position;
+    attribute vec3 inst_position;
     attribute vec3 normal;
+    attribute vec2 texture;
+    attribute float inst_color;
 
     varying vec3 v_position;
     varying vec3 v_normal;
+    varying vec2 v_tex;
+    varying float v_col;
 
     void main() {
-    v_position = position;
+    v_position = position + inst_position;
     v_normal = normal;
-    gl_Position = proj * view * matrix * vec4(v_position, 1.0);
+    v_tex = texture;
+    v_col = inst_color;
+    gl_Position = proj * view * model * vec4(v_position, 1.0);
             }";
 
 const FRAG_SH:&'static str = "#version 110
     varying vec3 v_position;
     varying vec3 v_normal;
-    const vec3 LIGHT = vec3(-1.0, 5.0, 0.1);
+    varying vec2 v_tex;
+    varying float v_col;
+
+    uniform sampler2D tex_lt;
+    uniform sampler2D tex_drk;
+
+    const vec3 LIGHT = vec3(-5.0, 200.0, 5);
     void main() {
+
     float lum = max(dot(normalize(v_normal), normalize(LIGHT-v_position)), 0.0);
     vec3 color = (0.3 + 0.7 * lum) * vec3(1.0, 1.0, 1.0);
-    gl_FragColor = vec4(color, 1.0);
+    if (v_col < 1.0) { gl_FragColor = vec4(color, 1.0) * texture2D(tex_drk, v_tex); }
+    else { gl_FragColor = vec4(color, 1.0) * texture2D(tex_lt, v_tex); }
+
             }";
 
+
+const VERT_SH_ITEM:&'static str =  "#version 110
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 proj;
+    uniform float col;
+    uniform vec3 npos;
+
+    attribute vec3 position;
+    attribute vec3 normal;
+    attribute vec2 texture;
+
+    varying vec3 v_position;
+    varying vec3 v_normal;
+    varying vec2 v_tex;
+    varying float v_col;
+
+    void main() {
+    v_position = position + npos;
+    v_normal = normal;
+    v_tex = texture;
+    v_col = col;
+    gl_Position = proj * view * model * vec4(v_position, 1.0);
+            }";
