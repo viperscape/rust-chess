@@ -16,14 +16,14 @@ fn main() {
 
     //spawn a loopback test server
     thread::spawn(move || {
-        let svr = Network::new_server();
+     //   let svr = Network::new_server();
     });
 
 
     let es = Events::new();
     let (gfx,inp) = Render::new(1024, 768, game.view());
     Inputs::new(inp, es.branch());
-    let mut net = Network::new_client(None,es.branch());
+  //  let mut net = Network::new_client(None,es.branch());
 
 
     let mut rc: Vec<Render> = vec!(); //let's us batch render commands together
@@ -47,7 +47,7 @@ fn main() {
                         }
                         else {
                             //bad game, cheating?
-                            net.send_server(Comm::EndGame);
+                     //       net.send_server(Comm::EndGame);
                             break 'gameloop;
                         }
                     },
@@ -68,7 +68,7 @@ fn main() {
                         println!("{:?}",r);
                         if r.is_ok() {
                             rc.push(Render::Animate(r.unwrap()));
-                            net.send_server(Comm::Move(mv.0,mv.1));
+                         //   net.send_server(Comm::Move(mv.0,mv.1));
                         }
                         else {
                             // todo: call renderer?
@@ -99,7 +99,7 @@ fn main() {
     }
 
     println!("shutting down main thread");
-    net.send_server(Comm::Quit);
+  //  net.send_server(Comm::Quit);
     gfx.send(vec!(Render::Quit));
     //let threads die, otherwise glium can get hung up
     //todo: consider joinguard on render-thread
