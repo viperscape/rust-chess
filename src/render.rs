@@ -32,16 +32,15 @@ impl Render {
         let (inpt,inpr) = channel();
         let (gfxt,gfxr) = channel();
 
-        // building the display, ie. the main object
-        let display = glutin::WindowBuilder::new()
-            .with_dimensions(w,h)
-            .with_title(format!("Chess"))
-            .with_depth_buffer(24)
-            .build_glium()
-            .unwrap();
-
         //let guard = thread::scoped
         thread::spawn(move || {
+            // building the display, ie. the main object
+            let display = glutin::WindowBuilder::new()
+                .with_dimensions(w,h)
+                .with_title(format!("Chess"))
+                .with_depth_buffer(24)
+                .build_glium()
+                .unwrap();
 
             let img_lt = image::load(BufReader::new(include_bytes!("data/img_lt.png")),
                                     image::PNG).unwrap();
@@ -172,14 +171,6 @@ impl Render {
                                      [0.0, 0.0, 1.0, 0.0],
                                      [0.0, 0.0, 0.0, 1.0f32]];*/
 
-                        let uniform = uniform! { model: model,
-                                                 proj: proj,
-                                                 view: view,
-                                                 tex_lt: &tex_lt,
-                                                 tex_drk: &tex_drk,
-                                                 col: color,
-                                                 npos: [(x*2) as f32, 0.5f32, (z*2) as f32] }; 
-
                         if let Some(_p) = *p {
                             let r = match _p {
                                 Player::White(i) => {
@@ -191,6 +182,14 @@ impl Render {
                                     items.get(&i)
                                 }
                             };
+
+                            let uniform = uniform! { model: model,
+                                                     proj: proj,
+                                                     view: view,
+                                                     tex_lt: &tex_lt,
+                                                     tex_drk: &tex_drk,
+                                                     col: color,
+                                                     npos: [(x*2) as f32, 0.5f32, (z*2) as f32] }; 
 
                             target.draw(r.unwrap(),
                                         &glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
