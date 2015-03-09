@@ -61,7 +61,7 @@ impl Game {
     }
 
     pub fn get_player (&self,at:Position) -> &Option<Player> {
-        &self.board[at.0][at.1]
+        &self.board[at.0 as usize][at.1 as usize]
     }
 
     /// swap out destination, and return original
@@ -71,7 +71,7 @@ impl Game {
             oldp = Some(_p);
         }
         else {oldp=None;}
-        self.board[at.0][at.1] = p;
+        self.board[at.0 as usize][at.1 as usize] = p;
         oldp
     }
 
@@ -277,7 +277,7 @@ impl Game {
                 if let Some(_p) = *c {
                     match _p {
                         Player::White(Item::King(_)) |
-                        Player::Black(Item::King(_)) => kings.push((i,j)),
+                        Player::Black(Item::King(_)) => kings.push((i as i8,j as i8)),
                         _ => (),
                     }
                 }
@@ -296,17 +296,17 @@ impl Game {
                         (Player::White(_),Player::White(_)) |
                         (Player::Black(_),Player::Black(_))  => (),
                         _ => {
-                            if (i,j) == king { break; } //exclude kings
+                            if (i as i8,j as i8) == king { break; } //exclude kings
 
-                            let res = p.play_isvalid((i,j),king,true);
+                            let res = p.play_isvalid((i as i8,j as i8),king,true);
 
                             if let Some(mt) = res { 
                                 match mt {
                                     MoveType::Regular => { 
-                                        let path = p.play_path((i,j),king).pop();
+                                        let path = p.play_path((i as i8,j as i8),king).pop();
                                         let res = path.iter().find(|&n| self.get_player(*n).is_some());
                                         if !res.is_some() { //not blocked
-                                            return Some((i,j)); 
+                                            return Some((i as i8,j as i8)); 
                                         }
                                     },
                                     _ => (),

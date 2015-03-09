@@ -25,7 +25,7 @@ pub mod events;
 pub mod render;
 pub mod glium_support;
 
-pub type Position = (usize,usize); //change to u8 when rust gets changed!
+pub type Position = (i8,i8); //change to u8 when rust gets changed!
 pub type Move = (Position,Position);
 pub type Capture = (Player,Position);
 pub type BoardLayout = [[Option<Player>;8];8];

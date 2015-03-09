@@ -1,5 +1,5 @@
 extern crate core;
-use self::core::num::Int;
+use self::core::num::{Int,SignedInt};
 
 use super::{Position,Move};
 
@@ -29,19 +29,13 @@ pub enum MoveType {
     Upgrade, //consider calling this queen, since that's the upgrade for pawn
 }
 
-//convenience functions
-fn abs (v: usize) -> usize { //wtf happened to std abs? also change to u8 soon
-    let v = v as i32;
-    if v < 0i32 {
-        (v * -1) as usize
-    } 
-    else {v as usize}
-}
-fn abs_pos (from:Position,to:Position) -> (usize,usize) {
-    let r = abs(to.0 - from.0);
-    let c = abs(to.1 - from.1);
+//convenience function
+fn abs_pos (from:Position,to:Position) -> Position {
+    let r = (to.0 - from.0).abs();
+    let c = (to.1 - from.1).abs();
     (r,c)
 }
+
 fn rng<T:PartialEq+Int, F:FnMut(T)> (d:T,dt:T,mut f:F) {
     if d>dt { for n in (dt..d).rev() { f(n); } }
     else { for n in (d..dt) { f(n); } }
@@ -86,6 +80,7 @@ impl Item {
     }
 
     fn pawn_logic (&self, from:Position, to:Position, inverted:bool) -> Option<PawnMove> {
+        //println!("{:?}{:?}",from,to);
         let (_,c) = abs_pos(from,to);
         if !inverted {
             if to.0 - from.0 == 1 &&
