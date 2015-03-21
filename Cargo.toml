@@ -67,3 +67,5 @@ optional = true
 [dependencies.image]
 version = "*"
 optional = true
+default-features = false
+features = ["png"]

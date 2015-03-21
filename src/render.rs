@@ -169,14 +169,12 @@ impl Render {
                 for (x,n) in board.iter().enumerate() { 
                     for (z,p) in n.iter().enumerate() { 
                         let mut color = 1.0f32;
-                        let mut model: Mat4<f32> = na::one();
+                        let mat =  [[1.0, 0.0, 0.0, 0.0],
+                                    [0.0, 1.0, 0.0, 0.0],
+                                    [0.0, 0.0, 1.0, 0.0],
+                                    [(x as f32 * 2.0f32), 0.0, (z as f32 * 2.0f32), 1.0f32]];
 
-                            /*[[1.0, 0.0, 0.0, 0.0],
-                                     [0.0, 1.0, 0.0, 0.0],
-                                     [0.0, 0.0, 1.0, 0.0],
-                                     [0.0, 0.0, 0.0, 1.0f32]];*/
-
-                        let mut nrot = Vec3::y();
+                        let mut nrot = 90.0f32;// = Vec3::y();
 
                         if let Some(_p) = *p {
                             let r = match _p {
@@ -186,27 +184,22 @@ impl Render {
                                 },
                                 Player::Black(i) => {
                                     color = 0.0f32;
-                                    nrot = Vec3::new(0.0f32,-1.0,0.0);
+                                    nrot = -90.0f32; //Vec3::new(0.0f32,-1.0,0.0);
                                     items.get(&i)
                                 }
                             };
 
-                            let rotmat4 = Rot3::new(nrot).to_homogeneous();
-                            let modelview = *(model *
-                                              viewmat4 *
-                                              rotmat4)
-                                .as_array();
+                            let transmat4: &Mat4<f32> = Mat4::from_array_ref(&mat);
+                            let rotmat4 = Rot3::new_with_euler_angles(0.0f32,nrot,0.0).to_homogeneous(); //Rot3::new(nrot).to_homogeneous();
 
                             let uniform = uniform! 
-                            { modelview: modelview,
+                            { model: *(*transmat4*rotmat4).as_array(),
                               proj: proj,
-                            //  view: view,
+                              view: view,
                               tex_lt: &tex_lt,
                               tex_drk: &tex_drk,
-                              col: color,
-                              npos: [(x as f32 * 2.0f32), 0.0f32, (z as f32 * 2.0f32)]
+                              col: color
                             };
-                             // nrot: [nrot.x as f32,nrot.y as f32,nrot.z as f32] }; 
 
                             target.draw(r.unwrap(),
                                         &glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
@@ -214,11 +207,9 @@ impl Render {
                         }
                     }
                 }
+
                 
                 target.finish();
-
-
-
 
                 // polling and handling the events received by the window
                 for event in display.poll_events() {
@@ -345,12 +336,10 @@ const FRAG_SH:&'static str = "#version 110
 
 
 const VERT_SH_ITEM:&'static str =  "#version 110
-    uniform mat4 modelview;
+    uniform mat4 model;
     uniform mat4 view;
     uniform mat4 proj;
     uniform float col;
-    uniform vec3 npos;
-  //  uniform vec3 nrot;
 
     attribute vec3 position;
     attribute vec3 normal;
@@ -362,9 +351,16 @@ const VERT_SH_ITEM:&'static str =  "#version 110
     varying float v_col;
 
     void main() {
-    v_position = position + npos;
+    v_position = position;
     v_normal = normal;
     v_tex = texture;
     v_col = col;
-    gl_Position = proj * modelview * vec4(v_position, 1.0);
+    gl_Position = proj * view * model * vec4(v_position, 1.0);
             }";
+
+
+//ignoreme:
+//proj * view * trans * rot * vertex_position
+//"trans * rot" ahead of rendering into "modelview"
+//shader:proj * view * model * vec4(v_position, 1.0)
+//uniforms: "model: trans * rot"
