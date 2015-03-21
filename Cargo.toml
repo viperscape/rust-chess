@@ -22,6 +22,8 @@ rand = "*"
 clock_ticks = "*"
 genmesh = "*"
 obj = "*"
+glutin = "*"
+glium = "*"
 
 [dependencies.interpolation]
 git = "https://github.com/PistonDevelopers/interpolation"
@@ -29,10 +31,6 @@ git = "https://github.com/PistonDevelopers/interpolation"
 [dependencies.piston3d-cam]
 git = "https://github.com/PistonDevelopers/cam"
 
-[dependencies.glium]
-git = "https://github.com/tomaka/glium"
-[dependencies.glutin]
-git = "https://github.com/tomaka/glutin"
 [dependencies.glium_macros]
 git = "https://github.com/tomaka/glium"
 
@@ -67,5 +65,5 @@ git = "https://github.com/sebcrozet/nalgebra"
 optional = true
 
 [dependencies.image]
-git = "https://github.com/PistonDevelopers/image"
+version = "*"
 optional = true

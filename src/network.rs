@@ -9,7 +9,7 @@ use self::wire::{SizeLimit,tcp};
 use std::sync::mpsc::{Sender};
 
 use std::sync::{Arc};
-use self::cubby::{Ent,Eid};
+use self::cubby::{mutex,rwlock,Eid};
 
 #[derive(Debug,RustcDecodable, RustcEncodable,Copy)]
 pub enum Comm {
@@ -20,10 +20,10 @@ pub enum Comm {
     Quit, //network is shutdown
 }
 
-struct Players(Ent<tcp::OutTcpStream<Comm>>);
+struct Players(mutex::CubbyMutex<tcp::OutTcpStream<Comm>>);
 impl Players {
     fn new () -> Players {
-        Players(Ent::new(4000))
+        Players(mutex::build(4000))
     }
 }
 
@@ -34,10 +34,10 @@ struct NetGame {
     id: u64, //consider removing? 
 }
 
-struct Games(Ent<NetGame>);
+struct Games(rwlock::CubbyRwLock<NetGame>);
 impl Games {
     fn new () -> Games {
-        Games(Ent::new(2000))
+        Games(rwlock::build(2000))
     }
 
     fn insert (&self) -> Eid {

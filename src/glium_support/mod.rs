@@ -6,7 +6,7 @@ extern crate obj;
 
 use std::old_io::timer;
 use std::time::duration::Duration;
-use glium::{self,Display};
+use glium::{self, Display};
 use glium::vertex::VertexBufferAny;
 
 pub mod camera;
@@ -52,7 +52,7 @@ pub fn load_wavefront(display: &Display, data: &[u8]) -> VertexBufferAny {
 
     implement_vertex!(Vertex, position, normal, texture);
 
-    let mut data = ::std::old_io::BufReader::new(data);
+    let mut data = ::std::io::BufReader::new(data);
     let data = obj::Obj::load(&mut data);
 
     let mut vertex_data = Vec::new();

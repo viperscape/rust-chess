@@ -18,6 +18,9 @@ use std::old_io::BufReader;
 use std::collections::HashMap;
 use glium::vertex::VertexBufferAny;
 
+extern crate "nalgebra" as na;
+use self::na::{Vec3,Mat4, Rot3, UnitQuat, ToHomogeneous};
+
 #[derive(Debug,Copy)]
 pub enum Render {
     Quit,
@@ -100,7 +103,7 @@ impl Render {
                             x % 2 == 0 && z % 2 == 0 { color = 0.0f32; }
 
                         data.push(Attr {
-                            inst_position: [(x*2) as f32, 0f32, (z*2) as f32],
+                            inst_position: [(x as f32 * 2.0f32), 0f32, (z as f32 * 2.0f32)],
                             inst_color: color,
                         });
                     }
@@ -129,7 +132,6 @@ impl Render {
                          [0.0, 0.0, 1.0, 0.0],
                          [0.0, 0.0, 0.0, 1.0f32]];
 
-            
 
             let mut paused = false;
             
@@ -137,6 +139,7 @@ impl Render {
             glium_support::start_loop(|| {
               //  cam.look_at([0f32,0f32,0f32]);
                 let view = cam.orthogonal();
+                let viewmat4 = *(Mat4::from_array_ref(&view));
 
                 // draw parameters
                 let params = glium::DrawParameters {
@@ -166,10 +169,14 @@ impl Render {
                 for (x,n) in board.iter().enumerate() { 
                     for (z,p) in n.iter().enumerate() { 
                         let mut color = 1.0f32;
-                        /*let model = [[1.0, 0.0, 0.0, 0.0],
+                        let mut model: Mat4<f32> = na::one();
+
+                            /*[[1.0, 0.0, 0.0, 0.0],
                                      [0.0, 1.0, 0.0, 0.0],
                                      [0.0, 0.0, 1.0, 0.0],
                                      [0.0, 0.0, 0.0, 1.0f32]];*/
+
+                        let mut nrot = Vec3::y();
 
                         if let Some(_p) = *p {
                             let r = match _p {
@@ -179,17 +186,27 @@ impl Render {
                                 },
                                 Player::Black(i) => {
                                     color = 0.0f32;
+                                    nrot = Vec3::new(0.0f32,-1.0,0.0);
                                     items.get(&i)
                                 }
                             };
 
-                            let uniform = uniform! { model: model,
-                                                     proj: proj,
-                                                     view: view,
-                                                     tex_lt: &tex_lt,
-                                                     tex_drk: &tex_drk,
-                                                     col: color,
-                                                     npos: [(x*2) as f32, 0.5f32, (z*2) as f32] }; 
+                            let rotmat4 = Rot3::new(nrot).to_homogeneous();
+                            let modelview = *(model *
+                                              viewmat4 *
+                                              rotmat4)
+                                .as_array();
+
+                            let uniform = uniform! 
+                            { modelview: modelview,
+                              proj: proj,
+                            //  view: view,
+                              tex_lt: &tex_lt,
+                              tex_drk: &tex_drk,
+                              col: color,
+                              npos: [(x as f32 * 2.0f32), 0.0f32, (z as f32 * 2.0f32)]
+                            };
+                             // nrot: [nrot.x as f32,nrot.y as f32,nrot.z as f32] }; 
 
                             target.draw(r.unwrap(),
                                         &glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
@@ -328,11 +345,12 @@ const FRAG_SH:&'static str = "#version 110
 
 
 const VERT_SH_ITEM:&'static str =  "#version 110
-    uniform mat4 model;
+    uniform mat4 modelview;
     uniform mat4 view;
     uniform mat4 proj;
     uniform float col;
     uniform vec3 npos;
+  //  uniform vec3 nrot;
 
     attribute vec3 position;
     attribute vec3 normal;
@@ -348,5 +366,5 @@ const VERT_SH_ITEM:&'static str =  "#version 110
     v_normal = normal;
     v_tex = texture;
     v_col = col;
-    gl_Position = proj * view * model * vec4(v_position, 1.0);
+    gl_Position = proj * modelview * vec4(v_position, 1.0);
             }";
