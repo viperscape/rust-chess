@@ -174,7 +174,7 @@ impl Render {
                                     [0.0, 0.0, 1.0, 0.0],
                                     [(x as f32 * 2.0f32), 0.0, (z as f32 * 2.0f32), 1.0f32]];
 
-                        let mut nrot = 90.0f32;// = Vec3::y();
+                        let mut nrot = na::BaseFloat::frac_pi_2();
 
                         if let Some(_p) = *p {
                             let r = match _p {
@@ -184,7 +184,7 @@ impl Render {
                                 },
                                 Player::Black(i) => {
                                     color = 0.0f32;
-                                    nrot = -90.0f32; //Vec3::new(0.0f32,-1.0,0.0);
+                                    nrot = na::BaseFloat::frac_pi_2() * -1.0f32;
                                     items.get(&i)
                                 }
                             };
