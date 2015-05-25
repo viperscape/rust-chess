@@ -6,7 +6,6 @@
 - full game of chess
 - GUI
 - networking (lan/multicast, internet server/client)
-- game validation/anti cheat
 - ai to combat
 
 basic example:
@@ -19,7 +18,3 @@ println!("valid move? {:?}",game.play((0,2),(2,0)));
 
 println!("{:?}",game); //prints out current gameboard layout
 ```
-
-[detailed example](https://github.com/viperscape/rust-chess/blob/master/src/main.rs)
-
-![Image of Chess Game](https://github.com/viperscape/rust-chess/blob/master/chess_ss.png)
