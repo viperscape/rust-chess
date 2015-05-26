@@ -1,6 +1,6 @@
 [package]
 
-name = "rust-chess"
+name = "chess"
 version = "0.0.1"
 authors = ["Chris Gill <chrisfgill@gmail.com>"]
 
