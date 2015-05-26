@@ -1,9 +1,7 @@
-extern crate core;
-use self::core::num::{Int,SignedInt};
+use ::{Position,Move};
 
-use super::{Position,Move};
 
-#[derive(Debug,Copy,Hash,Eq,PartialEq)]
+#[derive(Debug,Clone,Copy,Hash,Eq,PartialEq)]
 pub enum Item {
     Pawn,
     King(bool),
@@ -21,7 +19,7 @@ enum PawnMove {
 }
 
 // generic move types, needed at a higher level, so pass this back to Game
-#[derive(Debug,Copy)]
+#[derive(Debug,Clone,Copy)]
 pub enum MoveType {
     Regular,
     Castle, // rook or king castling
@@ -34,11 +32,6 @@ fn abs_pos (from:Position,to:Position) -> Position {
     let r = (to.0 - from.0).abs();
     let c = (to.1 - from.1).abs();
     (r,c)
-}
-
-fn rng<T:PartialEq+Int, F:FnMut(T)> (d:T,dt:T,mut f:F) {
-    if d>dt { for n in (dt..d).rev() { f(n); } }
-    else { for n in (d..dt) { f(n); } }
 }
 
 impl Item {
@@ -172,11 +165,21 @@ impl Item {
         let mut v = Vec::new();
 
         // heading down row or column?
-        if from.0 != to.0 {
-            rng (from.0,to.0, |n| { v.push((n,from.1)); });
+        if from.0 != to.0 { //row not same? moving along column
+            if from.0 < to.0 {
+                for n in (from.0..to.0) { v.push((n,from.1)); }
+            }
+            else { //reverse
+                for n in (from.0..to.0).rev() { v.push((n,from.1)); }
+            }
         }
         else {
-            rng (from.1,to.1, |n| { v.push((from.0,n)); });
+            if from.1 < to.1 {
+                for n in (from.1..to.1) { v.push((from.0,n)); }
+            }
+            else { //reverse
+                for n in (from.1..to.1).rev() { v.push((from.0,n)); }
+            }
         }
 
         v
@@ -191,13 +194,24 @@ impl Item {
         if from.0 > to.0 {tr -= 1;}
         else {tr += 1;}
 
-        rng (from.0,tr, |n| {
-            v.push((n,m));
+        if from.0 < tr {
+            for n in (from.0..tr) {
+                v.push((n,m));
 
-            //adjust column
-            if from.1 > to.1 { m-=1; }
-            else { m+=1; }
-        });
+                //adjust column
+                if from.1 > to.1 { m-=1; }
+                else { m+=1; }
+            }
+        }
+        else {
+            for n in (from.0..tr) {
+                v.push((n,m));
+
+                //adjust column
+                if from.1 > to.1 { m-=1; }
+                else { m+=1; }
+            }
+        }
 
         v
     }
@@ -213,7 +227,7 @@ impl Item {
     }
 }
 
-#[derive(Debug,Copy)]
+#[derive(Debug,Clone,Copy)]
 pub enum Player {
     Black(Item),
     White(Item),

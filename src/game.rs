@@ -322,7 +322,7 @@ impl Game {
 
 }
 
-#[derive(Debug,Copy)]
+#[derive(Debug,Clone,Copy)]
 pub struct MoveValid {
     pub item: Player,
     pub cap: Option<Capture>,
@@ -331,7 +331,7 @@ pub struct MoveValid {
     pub mv: Move, //from,to; for render
 }
 
-#[derive(Debug,Copy)]
+#[derive(Debug,Clone,Copy)]
 pub enum MoveIllegal {
     Blocked(Position),
     Check(Position,Position), //from piece and to king
