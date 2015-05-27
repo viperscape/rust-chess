@@ -1,4 +1,4 @@
-use super::{Player,Item,Position,MoveType,Move,Capture,BoardLayout};
+use super::{Player,Item,Position,MoveType,Move,Capture,BoardLayout,ANPosition};
 
 #[derive(Debug)]
 pub struct Game {
@@ -51,6 +51,8 @@ impl Game {
         self.board
     }
 
+    pub fn get_active(&self) -> Player { self.active }
+
     pub fn start (&mut self, id:u64) {
         self.id = id;
     }
@@ -64,6 +66,15 @@ impl Game {
         &self.board[at.0 as usize][at.1 as usize]
     }
 
+    pub fn get_player_an(&mut self, at:ANPosition) -> &Option<Player> {
+        self.get_player((at.1 -1i8,at.0 as i8))
+    }
+
+    pub fn in_check(&self) -> Option<Player> {
+        self.check
+    }
+    
+
     /// swap out destination, and return original
     fn swap_pos (&mut self,at:Position, p:Option<Player>) -> Option<Player> {
         let oldp;
@@ -75,6 +86,10 @@ impl Game {
         oldp
     }
 
+    //todo: actual SAN moves!
+    pub fn play_an(&mut self, from:ANPosition,to:ANPosition) -> Result<MoveValid,MoveIllegal> {
+        self.play((from.1 -1i8,from.0 as i8),(to.1 -1i8,to.0 as i8))
+    }
     pub fn play (&mut self, from:Position,to:Position) -> Result<MoveValid,MoveIllegal> {
         if let &Some(player) = self.get_player(from) { //must select an actual piece
 
@@ -103,11 +118,13 @@ impl Game {
                     }
                 }
 
-
-                let path = player.play_path(from,to).pop(); //get path and remove dest
-                let res = path.iter().find(|&n| self.get_player(*n).is_some());
-
+                let path =  player.play_path(from,to);
+                let res = path.iter().find(|&n|
+                                           self.get_player(*n).is_some() &&
+                                           *n != from &&
+                                           *n != to);
                 if res.is_some() { //blocked
+                    println!("p{:?}",path);
                     return Err(MoveIllegal::Blocked(*res.unwrap()));
                 }
 
@@ -257,15 +274,16 @@ impl Game {
     }
 
     fn capturing (&self, from: Position, to: Position) -> bool {
-        if let &Some(p) = self.get_player(to) {
-            let res = match (p,self.get_player(from).unwrap()) {
+        let mut res = false;
+        if let &Some(p2) = self.get_player(to) {
+            let p1 = self.get_player(from).unwrap();
+            res = match (p1,p2) {
                 (Player::Black(_),Player::White(_)) => true,
                 (Player::White(_),Player::Black(_)) => true,
                 _ => false,
             };
-            return res
         }
-        false
+        res
     }
 
     /// get kings' positions
@@ -302,9 +320,12 @@ impl Game {
 
                             if let Some(mt) = res { 
                                 match mt {
-                                    MoveType::Regular => { 
-                                        let path = p.play_path((i as i8,j as i8),king).pop();
-                                        let res = path.iter().find(|&n| self.get_player(*n).is_some());
+                                    MoveType::Regular => { //fixme: might need to fix this for double pawn
+                                        let path = p.play_path((i as i8,j as i8),king);
+                                        let res = path.iter().find(|&n|
+                                                                   self.get_player(*n).is_some() &&
+                                                                   *n != (i as i8,j as i8) &&
+                                                                   *n != king);
                                         if !res.is_some() { //not blocked
                                             return Some((i as i8,j as i8)); 
                                         }

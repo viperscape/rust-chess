@@ -12,6 +12,7 @@ pub enum Item {
     EnPass(Position), //position to original pawn
 }
 
+#[derive(Debug,Clone,Copy,Hash,Eq,PartialEq)]
 enum PawnMove {
     Single,
     Double,
@@ -137,8 +138,8 @@ impl Item {
             match res {
                 PawnMove::Single => Some(MoveType::Regular),
                 PawnMove::Double => {
-                    if inverted { Some(MoveType::Double((from.0 - 1, from.1))) }
-                    else { Some(MoveType::Double((to.0 - 1, from.1))) }
+                    if inverted { Some(MoveType::Double((from.0-1, from.1))) }
+                    else { Some(MoveType::Double((from.0+1, from.1))) }
                 },
                 PawnMove::Capture => {
                     if capturing {Some(MoveType::Regular)}
@@ -227,7 +228,7 @@ impl Item {
     }
 }
 
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug,Clone,Copy,PartialEq,Eq)]
 pub enum Player {
     Black(Item),
     White(Item),
