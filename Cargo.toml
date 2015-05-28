@@ -14,6 +14,21 @@ description = "The Game of Chess, in Rust"
 name = "chess"
 path = "examples/chess.rs"
 
+[dependencies.conrod]
+git = "https://github.com/PistonDevelopers/conrod"
+
+[dependencies.elmesque]
+git = "https://github.com/mitchmindtree/elmesque"
+
+[dependencies.pistoncore-glutin_window]
+git = "https://github.com/PistonDevelopers/glutin_window.git"
+
+[dependencies.piston2d-opengl_graphics]
+git = "https://github.com/PistonDevelopers/opengl_graphics.git"
+
+[dependencies.piston]
+git = "https://github.com/PistonDevelopers/piston/"
+
 [dependencies]
 ##wire = "*"
-num = "*"
+uuid = "0.1"
