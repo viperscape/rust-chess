@@ -18,6 +18,14 @@ use piston::event::*;
 use piston::window::{ WindowSettings, Size };
 use std::path::Path;
 
+const PaneId:usize = 0;
+
+/// menu states
+enum Menu {
+    Main,
+    Game,
+}
+
 fn main () {
     let mut game = Game::new();
     let mut win_dim = (1024,768);
@@ -41,16 +49,22 @@ fn main () {
     let glyph_cache = GlyphCache::new(&font_path).unwrap();
     let mut ui = &mut Ui::new(glyph_cache, theme);
 
+    let mut menu_state = Menu::Main;
+    
     for event in event_iter {
         ui.handle_event(&event);
 
         if let Some(args) = event.render_args() {
             gl.draw(args.viewport(), |c, gl| {
-
+                let mut offset = PaneId+1;
+                
                 // Draw the background.
                 Background::new().rgb(0.2, 0.2, 0.2).draw(ui, gl); //this swaps buffers for us
+                Split::new(PaneId).color(dark_grey()).set(ui);
 
-                build_board_ui(0,ui, &game, &win_dim);
+                build_menu_ui(&mut offset,ui, &mut game, &mut menu_state);
+                build_board_ui(&mut offset,ui, &game, &win_dim, &menu_state);
+                
                 
                 // Draw our Ui!
                 ui.draw(c,gl);
@@ -60,32 +74,74 @@ fn main () {
     }
 }
 
-fn build_board_ui (offset: usize, ui: &mut Ui<GlyphCache>, game: &Game, win_dim: &(u32,u32)) {
-    let mut offset = offset+1;
-    Split::new(offset).color(dark_grey()).set(ui);
-    
-    let item_dim = (win_dim.0 as f64/8.2, win_dim.1 as f64/10.0);
+fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, game: &Game, win_dim: &(u32,u32), menu_state: &Menu) {
+    match *menu_state {
+        Menu::Game => {
+            let item_dim = (win_dim.0 as f64/8.2, win_dim.1 as f64/10.0);
 
-    for (i,r) in game.view().iter().enumerate() {
-        offset += 8;
-        for (j,c) in r.iter().enumerate() {
-            let mut b: Button<_>;
-            if (i == 0) & (j == 0) {
-                b = Button::new().bottom_left_of(offset-8);
-            }
-            else if j == 0 {
-                let mut id = offset-8;
-                b = Button::new().up_from(UiId::Widget(id-j),5.0);
-            }
-            else {
-                b = Button::new().right(5.0);
+            for (i,r) in game.view().iter().enumerate() {
+                *offset += 8;
+                for (j,c) in r.iter().enumerate() {
+                    let mut b: Button<_>;
+                    if (i == 0) & (j == 0) {
+                        b = Button::new().bottom_left_of(PaneId);
+                    }
+                    else if j == 0 {
+                        let mut id = *offset-8;
+                        b = Button::new().up_from(UiId::Widget(id-j),5.0);
+                    }
+                    else {
+                        b = Button::new().right(5.0);
+                    }
+
+                    b.label("X")
+                        .dimensions(item_dim.0, item_dim.1)
+                        .react(|| {
+                        })
+                        .set(*offset+j, ui);
+                }
             }
 
-            b.label("X")
-                .dimensions(item_dim.0, item_dim.1)
+            *offset += 8;
+        },
+        _=>(),
+    }
+}
+
+fn build_menu_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, game: &mut Game, menu_state: &mut Menu) {
+    match *menu_state {
+        Menu::Main => {
+            *offset +=1;
+            Button::new()
+                .top_left_of(PaneId)
+                .label("New Game")
+                .dimensions(200.0, 60.0)
+                .react(|| {
+                    *menu_state = Menu::Game;
+                    *game = Game::new();
+                })
+                .set(*offset, ui);
+            
+            *offset +=1;
+            Button::new()
+                .right(10.0)
+                .label("Load Game")
+                .dimensions(200.0, 60.0)
                 .react(|| {
                 })
-                .set(offset+j, ui);
-        }
+                .set(*offset, ui);
+        },
+        Menu::Game => {
+            *offset +=1;
+            Button::new()
+                .top_left_of(PaneId)
+                .label("Exit Game")
+                .dimensions(200.0, 60.0)
+                .react(|| {
+                    *menu_state = Menu::Main;
+                })
+                .set(*offset, ui);
+        },
+        //_ => (),
     }
 }
