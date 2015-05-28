@@ -128,7 +128,7 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
                                     Item::Bishop => "Bishop",
                                     Item::King(_) => "King",
                                     Item::Queen => "Queen",
-                                    _ => "",
+                                    _ => "EP",
                                 };
                             },
                             Player::White(item) => {
@@ -139,7 +139,7 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
                                     Item::Bishop => "Bishop",
                                     Item::King(_) => "King",
                                     Item::Queen => "Queen",
-                                    _ => "",
+                                    _ => "EP",
                                 };
                             },
                         }

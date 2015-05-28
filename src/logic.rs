@@ -74,8 +74,8 @@ impl Item {
     }
 
     fn pawn_logic (&self, from:Position, to:Position, inverted:bool) -> Option<PawnMove> {
-        //println!("{:?}{:?}",from,to);
         let (_,c) = abs_pos(from,to);
+        
         if !inverted {
             if to.0 - from.0 == 1 &&
                 c == 1 {Some(PawnMove::Capture)}  // diagonally on capture
@@ -136,9 +136,13 @@ impl Item {
     fn pawn_isvalid (&self, from: Position , to: Position, inverted:bool, capturing:bool) -> Option<MoveType> {
         if let Some(res) = self.pawn_logic(from,to,inverted) {
             match res {
-                PawnMove::Single => Some(MoveType::Regular),
+                PawnMove::Single => {
+                    if capturing { None }
+                    else { Some(MoveType::Regular) }
+                },
                 PawnMove::Double => {
-                    if inverted { Some(MoveType::Double((from.0-1, from.1))) }
+                    if capturing { None }
+                    else if inverted { Some(MoveType::Double((from.0-1, from.1))) }
                     else { Some(MoveType::Double((from.0+1, from.1))) }
                 },
                 PawnMove::Capture => {

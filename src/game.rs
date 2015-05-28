@@ -142,6 +142,7 @@ impl Game {
                             match _item {
                                 Item::EnPass(pos) => {
                                     let _p = self.get_player(pos).unwrap();
+                                    self.swap_pos(pos,None);
                                     _cap = Some((_p,pos));
                                     self.captured.push(_p);
                                 },
@@ -178,7 +179,7 @@ impl Game {
                         //swap in the enpass ghost
                         match player {
                             Player::White(_) => {self.swap_pos(pos,Some(Player::White(Item::EnPass(to))));},
-                            Player::Black(_) => {self.swap_pos(pos,Some(Player::White(Item::EnPass(to))));},
+                            Player::Black(_) => {self.swap_pos(pos,Some(Player::Black(Item::EnPass(to))));},
                         }
                         self.swap_pos(from,None);
                     },
