@@ -3,7 +3,14 @@ extern crate glutin_window;
 extern crate opengl_graphics;
 extern crate piston;
 
-use conrod::{Background, Colorable, Theme, Ui, Positionable, WidgetId};
+extern crate chess;
+use chess::{Game,Player,Item,AN};
+
+
+use conrod::{Background, Colorable, Theme, Ui, Positionable, Widget,WidgetId, Button, Labelable,Sizeable};
+use conrod::color::{blue, light_grey, orange, dark_grey, red, white};
+use conrod::{Label, Split, WidgetMatrix, Floating};
+
 use glutin_window::GlutinWindow;
 use opengl_graphics::{ GlGraphics, OpenGL };
 use opengl_graphics::glyph_cache::GlyphCache;
@@ -12,6 +19,9 @@ use piston::window::{ WindowSettings, Size };
 use std::path::Path;
 
 fn main () {
+    let mut game = Game::new();
+
+    
     let opengl = OpenGL::_3_2;
     let window = GlutinWindow::new(
         opengl,
@@ -39,11 +49,39 @@ fn main () {
 
                 // Draw the background.
                 Background::new().rgb(0.2, 0.2, 0.2).draw(ui, gl); //this swaps buffers for us
+
+                build_board_ui(0,ui, &game);
                 
                 // Draw our Ui!
                 ui.draw(c,gl);
 
             });
+        }
+    }
+}
+
+fn build_board_ui (offset: usize, ui: &mut Ui<GlyphCache>, game: &Game) {
+    Split::new(offset+1).color(dark_grey()).set(ui);
+    
+    Button::new()
+        .bottom_left_of(offset+1)
+        .label("X")
+        .dimensions(40.0, 40.0)
+        .react(|| {
+        })
+        .set(offset+2, ui);
+
+    let offset = offset+2;
+
+    for (i,r) in game.view().iter().enumerate() {
+        for (j,c) in r.iter().enumerate() {
+            Button::new()
+                .right(5.0)
+                .label("X")
+                .dimensions(40.0, 40.0)
+                .react(|| {
+                })
+                .set(offset+j, ui);
         }
     }
 }
