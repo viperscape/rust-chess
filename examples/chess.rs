@@ -8,7 +8,7 @@ use chess::{Game,Player,Item,AN};
 
 
 use conrod::{Background, Colorable, Theme, Ui, UiId, Positionable, Widget,WidgetId, Button, Labelable,Sizeable};
-use conrod::color::{blue, light_grey, orange, dark_grey, red, white};
+use conrod::color::{blue, light_grey, orange, dark_grey, red, white, black};
 use conrod::{Label, Split, WidgetMatrix, Floating};
 
 use glutin_window::GlutinWindow;
@@ -76,7 +76,7 @@ fn main () {
                 
                 // Draw the background.
                 Background::new().rgb(0.2, 0.2, 0.2).draw(ui, gl); //this swaps buffers for us
-                Split::new(PaneId).color(dark_grey()).set(ui);
+                Split::new(PaneId).color(black()).set(ui);
 
                 build_menu_ui(&mut offset,ui, &mut gs);
                 build_board_ui(&mut offset,ui, &mut gs);
@@ -118,6 +118,7 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
 
                     // todo: convert to fmt for player pieces
                     let mut label = "";
+                    let mut color = light_grey();
                     if let Some(player) = *piece {
                         match player {
                             Player::Black(item) => {
@@ -128,8 +129,9 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
                                     Item::Bishop => "Bishop",
                                     Item::King(_) => "King",
                                     Item::Queen => "Queen",
-                                    _ => "EP",
+                                    _ => "", //en-pass ghost
                                 };
+                                if label != "" { color = dark_grey(); }
                             },
                             Player::White(item) => {
                                 label = match item {
@@ -139,7 +141,7 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
                                     Item::Bishop => "Bishop",
                                     Item::King(_) => "King",
                                     Item::Queen => "Queen",
-                                    _ => "EP",
+                                    _ => "",
                                 };
                             },
                         }
@@ -151,11 +153,18 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
                     
                     b.label(label)
                         .dimensions(item_dim.0, item_dim.1)
+                        .color(color)
                         .react(|| {
-                            if gs.select.0.is_some() {
-                                if !gs.select.1.is_some() { gs.select.1 = Some((i as i8,j as i8)); }
+                            let pos = (i as i8,j as i8);
+                            let is_piece = gs.game.get_player(pos).is_some();
+                            let done_select = gs.select.1.is_some();
+                            
+                            if gs.select.0.is_some() && !done_select {
+                                gs.select.1 = Some(pos);
                             }
-                            else { gs.select.0 = Some((i as i8,j as i8)); }
+                            else if is_piece && !done_select {
+                                gs.select.0 = Some(pos);
+                            }
                         })
                         .set(*offset+j, ui);
                 }
