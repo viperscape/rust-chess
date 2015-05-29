@@ -308,27 +308,28 @@ impl Game {
 
     fn check_isvalid (&self, king: Position) -> Option<Position> {
         for (i,r) in self.board.iter().enumerate() {
-            for (j,c) in r.iter().enumerate() {
-                if let Some(p) = *c {
+            for (j,player) in r.iter().enumerate() {
+                if let Some(p) = *player {
                     
-                    match (p,self.active) {
+                    match (p,self.get_player(king).unwrap()) {
                         (Player::White(_),Player::White(_)) |
                         (Player::Black(_),Player::Black(_))  => (),
                         _ => {
-                            if (i as i8,j as i8) == king { break; } //exclude kings
-
-                            let res = p.play_isvalid((i as i8,j as i8),king,true);
+                            let from = (i as i8,j as i8);
+                            if from == king { break; } //exclude self
+                            
+                            let res = p.play_isvalid(from,king,true);
 
                             if let Some(mt) = res { 
                                 match mt {
-                                    MoveType::Regular => { //fixme: might need to fix this for double pawn
-                                        let path = p.play_path((i as i8,j as i8),king);
-                                        let res = path.iter().find(|&n|
-                                                                   self.get_player(*n).is_some() &&
-                                                                   *n != (i as i8,j as i8) &&
-                                                                   *n != king);
-                                        if !res.is_some() { //not blocked
-                                            return Some((i as i8,j as i8)); 
+                                    MoveType::Regular => {
+                                        let path = p.play_path(from,king);
+                                        let path_res = path.iter().find(|&n|
+                                                                        self.get_player(*n).is_some() &&
+                                                                        *n != from &&
+                                                                        *n != king);
+                                        if !path_res.is_some() { //not blocked
+                                            return Some(from); 
                                         }
                                     },
                                     _ => (),

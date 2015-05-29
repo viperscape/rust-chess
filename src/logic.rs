@@ -58,10 +58,10 @@ impl Item {
     }
 
     fn king_logic (&self, from:Position, to:Position, hasmoved:bool) -> Option<MoveType> {
-        let (r,_) = abs_pos(from,to);
+        let (r,c) = abs_pos(from,to);
 
         if r < 2 &&
-            r < 2 {Some(MoveType::Regular)}
+            c < 2 {Some(MoveType::Regular)}
         else if self.castling_logic(from,to) && !hasmoved {Some(MoveType::Castle)}
         else {None}
     }
@@ -162,8 +162,13 @@ impl Item {
             _ => (),
         }
         
-        if self.bishop_logic(from,to) { self.bishop_path(from,to) }
-        else { vec!(to) }
+        if self.bishop_logic(from,to) { return self.bishop_path(from,to) }
+
+        match self.king_logic(from,to,true) {
+            Some(MoveType::Regular) => {return vec!(from,to);},
+            _ => (),
+        }
+        vec!()
     }
 
     fn rook_path (&self, from:Position, to:Position) -> Vec<Position> {
@@ -175,7 +180,7 @@ impl Item {
                 for n in (from.0..to.0) { v.push((n,from.1)); }
             }
             else { //reverse
-                for n in (from.0..to.0).rev() { v.push((n,from.1)); }
+                for n in (to.0..from.0).rev() { v.push((n,from.1)); }
             }
         }
         else {
@@ -183,10 +188,11 @@ impl Item {
                 for n in (from.1..to.1) { v.push((from.0,n)); }
             }
             else { //reverse
-                for n in (from.1..to.1).rev() { v.push((from.0,n)); }
+                for n in (to.1..from.1).rev() { v.push((from.0,n)); }
             }
         }
 
+        v.push(to);
         v
     }
 
@@ -218,6 +224,7 @@ impl Item {
             }
         }
 
+        v.push(to);
         v
     }
 
@@ -227,7 +234,7 @@ impl Item {
             Item::Queen => self.queen_path(from,to),
             Item::Rook(_) =>  self.rook_path(from,to),
             Item::Bishop => self.bishop_path(from,to),
-            _ => vec!(to), //single space destination
+            _ => vec!(from,to), //single space destination
         }
     }
 }
