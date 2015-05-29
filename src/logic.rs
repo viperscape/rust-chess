@@ -37,32 +37,40 @@ fn abs_pos (from:Position,to:Position) -> Position {
 
 impl Item {
     fn castling_logic  (&self, from:Position, to:Position) -> bool {
-        if to.0 != 0 || to.0 != 7 { return false; } //not on home row?
-        if to.1 == 4 { //castling? to king
-            if from == (0,0) ||
-                from == (0,7) { return true; }
-        }
-        else if to.1 == 0 || to.1 == 7 { //castling? to rook
-            if from == (7,0) ||
-                from == (7,7) { return true; }
-        }
+        if (to.0 == 0 && from.0 == 0) ||
+            (to.0 == 7 && from.0 == 7) {
+                if to.1 == 4 { //castling? towards king from rook
+                    if from == (0,0) ||
+                        from == (0,7) ||
+                        from == (7,0) ||
+                        from == (7,7)
+                    { return true; }
+                }
+                else if to.1 == 0 || to.1 == 7 { //castling? towards rook from king
+                    if from == (0,4) ||
+                        from == (7,4)
+                    { return true; }
+                }
+            }
 
         false
     }
 
     fn rook_logic (&self, from:Position, to:Position, hasmoved:bool) -> Option<MoveType> {
-        if to.0 == from.0 ||
+        if self.castling_logic(from,to) && !hasmoved { Some(MoveType::Castle) }
+        else if to.0 == from.0 ||
             to.1 == from.1 {Some(MoveType::Regular)}
-        else if self.castling_logic(from,to) && !hasmoved {Some(MoveType::Castle)}
         else {None}
     }
 
     fn king_logic (&self, from:Position, to:Position, hasmoved:bool) -> Option<MoveType> {
         let (r,c) = abs_pos(from,to);
 
-        if r < 2 &&
-            c < 2 {Some(MoveType::Regular)}
-        else if self.castling_logic(from,to) && !hasmoved {Some(MoveType::Castle)}
+        if self.castling_logic(from,to) && !hasmoved { Some(MoveType::Castle) }
+        else if (r == 0 && c == 1) ||
+            (r == 1 && c == 0) ||
+            (r == 1 && c == 1)
+        {Some(MoveType::Regular)}
         else {None}
     }
 
@@ -204,7 +212,7 @@ impl Item {
         //adjust by 1 for range
         if from.0 > to.0 {tr -= 1;}
         else {tr += 1;}
-
+        
         if from.0 < tr {
             for n in (from.0..tr) {
                 v.push((n,m));

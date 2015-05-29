@@ -124,7 +124,6 @@ impl Game {
                                            *n != from &&
                                            *n != to);
                 if res.is_some() { //blocked
-                    println!("p{:?}",path);
                     return Err(MoveIllegal::Blocked(*res.unwrap()));
                 }
 
@@ -191,7 +190,28 @@ impl Game {
                         self.swap_pos(from,None);
                     },
                     MoveType::Regular => { //clear the space it came from
+
+                        // reset king or rook if moved, so castling is not possible
+                        let mut _p = player;
+                        match player {
+                            Player::White(item) => {
+                                match item {
+                                    Item::Rook(_) => { _p = Player::White(Item::Rook(true)); },
+                                    Item::King(_) => { _p = Player::White(Item::King(true)); },
+                                    _ => (),
+                                }
+                            },
+                            Player::Black(item) => {
+                                match item {
+                                    Item::Rook(_) => { _p = Player::Black(Item::Rook(true)); },
+                                    Item::King(_) => { _p = Player::Black(Item::King(true)); },
+                                    _ => (),
+                                }
+                            },
+                        }
+                        
                         self.swap_pos(from,None);
+                        self.swap_pos(to,Some(_p));
                     },
                 }
 
