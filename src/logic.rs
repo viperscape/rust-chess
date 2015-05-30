@@ -188,7 +188,7 @@ impl Item {
                 for n in (from.0..to.0) { v.push((n,from.1)); }
             }
             else { //reverse
-                for n in (to.0..from.0).rev() { v.push((n,from.1)); }
+                for n in (to.0..from.0+1).rev() { v.push((n,from.1)); }
             }
         }
         else {
@@ -196,7 +196,7 @@ impl Item {
                 for n in (from.1..to.1) { v.push((from.0,n)); }
             }
             else { //reverse
-                for n in (to.1..from.1).rev() { v.push((from.0,n)); }
+                for n in (to.1..from.1+1).rev() { v.push((from.0,n)); }
             }
         }
 
@@ -206,29 +206,24 @@ impl Item {
 
     fn bishop_path (&self, from:Position, to:Position) -> Vec<Position> {
         let mut v = Vec::new();
-        let mut m = from.1;
-        let mut tr = to.0;
-
-        //adjust by 1 for range
-        if from.0 > to.0 {tr -= 1;}
-        else {tr += 1;}
+        let mut c = from.1;
         
-        if from.0 < tr {
-            for n in (from.0..tr) {
-                v.push((n,m));
+        if from.0 < to.0 {
+            for r in (from.0..to.0) {
+                v.push((r,c));
 
                 //adjust column
-                if from.1 > to.1 { m-=1; }
-                else { m+=1; }
+                if from.1 > to.1 { c-=1; }
+                else { c+=1; }
             }
         }
         else {
-            for n in (from.0..tr) {
-                v.push((n,m));
+            for r in (to.0..from.0+1).rev() { //offset, rev range is tricky
+                v.push((r,c));
 
                 //adjust column
-                if from.1 > to.1 { m-=1; }
-                else { m+=1; }
+                if from.1 > to.1 { c-=1; }
+                else { c+=1; }
             }
         }
 
