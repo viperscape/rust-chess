@@ -19,6 +19,11 @@ use piston::window::{ WindowSettings, Size };
 use std::path::Path;
 
 const PaneId:usize = 0;
+const NewGameId:usize = 100;
+const LoadGameId:usize = 101;
+const ExitGameId:usize = 102;
+const PlayerActiveId:usize = 103;
+const PlayerCheckId:usize = 104;
 
 /// menu states
 enum Menu {
@@ -179,7 +184,6 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
 fn build_menu_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameState) {
     match gs.menu {
         Menu::Main => {
-            *offset +=1;
             Button::new()
                 .top_left_of(PaneId)
                 .label("New Game")
@@ -188,19 +192,17 @@ fn build_menu_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameStat
                     gs.menu = Menu::Game;
                     gs.game = Game::new();
                 })
-                .set(*offset, ui);
+                .set(NewGameId, ui);
             
-            *offset +=1;
             Button::new()
                 .right(10.0)
                 .label("Load Game")
                 .dimensions(200.0, 60.0)
                 .react(|| {
                 })
-                .set(*offset, ui);
+                .set(LoadGameId, ui);
         },
         Menu::Game => {
-            *offset +=1;
             Button::new()
                 .top_left_of(PaneId)
                 .label("Exit Game")
@@ -208,7 +210,31 @@ fn build_menu_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameStat
                 .react(|| {
                     gs.menu = Menu::Main;
                 })
-                .set(*offset, ui);
+                .set(ExitGameId, ui);
+
+            let mut label = "White";
+            match gs.game.get_active() {
+                Player::Black(_) => { label="Black"; },
+                _ => (),
+            }
+            Label::new(label)
+                .right(50.0)
+                .color(blue())
+                .dimensions(100.0, 60.0)
+                .set(PlayerActiveId, ui);
+
+            if let Some(player) = gs.game.in_check() {
+                let mut label;
+                match player {
+                    Player::White(_) => { label = "In Check: White"; },
+                    _ => { label = "In Check: Black"; },
+                }
+                Label::new(label)
+                    .right(50.0)
+                    .color(orange())
+                    .dimensions(100.0, 60.0)
+                    .set(PlayerCheckId, ui);
+            }
         },
         //_ => (),
     }
