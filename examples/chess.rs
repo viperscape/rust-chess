@@ -8,7 +8,7 @@ use chess::{Game,Player,Item,AN};
 
 
 use conrod::{Background, Colorable, Theme, Ui, UiId, Positionable, Widget,WidgetId, Button, Labelable,Sizeable};
-use conrod::color::{blue, light_grey, orange, dark_grey, red, white, black};
+use conrod::color::{blue, light_grey, orange, dark_grey, red, white, black, dark_yellow};
 use conrod::{Label, Split, WidgetMatrix, Floating};
 
 use glutin_window::GlutinWindow;
@@ -124,6 +124,7 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
                     // todo: convert to fmt for player pieces
                     let mut label = "";
                     let mut color = light_grey();
+                    let mut fontcolor = blue();
                     if let Some(player) = *piece {
                         match player {
                             Player::Black(item) => {
@@ -136,7 +137,7 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
                                     Item::Queen => "Queen",
                                     _ => "", //en-pass ghost
                                 };
-                                if label != "" { color = dark_grey(); }
+                                if label != "" { fontcolor = red(); }
                             },
                             Player::White(item) => {
                                 label = match item {
@@ -152,13 +153,34 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
                         }
                     }
 
-                    //if let Some(ref pos) = gs.select.0 {
-                    //    if *pos == (i as i8,j as i8) { b.color(blue()); }
-                    //}
+
+                    // checker-color the board
+                    if i%2 == 0 {
+                        if j%2 == 0 {
+                            color = dark_grey();
+                        }
+                        else {
+                            color = light_grey();
+                        }
+                    }
+                    else {
+                        if j%2 == 0 {
+                            color = light_grey();
+                        }
+                        else {
+                            color = dark_grey();
+                        }
+                    }
+
+                    if let Some(ref pos) = gs.select.0 {
+                        if *pos == (i as i8,j as i8) { color = black(); }
+                    }
+                    
                     
                     b.label(label)
                         .dimensions(item_dim.0, item_dim.1)
                         .color(color)
+                        .label_color(fontcolor)
                         .react(|| {
                             let pos = (i as i8,j as i8);
                             let is_piece = gs.game.get_player(pos).is_some();
@@ -213,13 +235,15 @@ fn build_menu_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameStat
                 .set(ExitGameId, ui);
 
             let mut label = "White";
+            let mut fontcolor = blue();
             match gs.game.get_active() {
-                Player::Black(_) => { label="Black"; },
+                Player::Black(_) => { label="Black";
+                                      fontcolor = red(); },
                 _ => (),
             }
             Label::new(label)
                 .right(50.0)
-                .color(blue())
+                .color(fontcolor)
                 .dimensions(100.0, 60.0)
                 .set(PlayerActiveId, ui);
 
