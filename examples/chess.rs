@@ -45,7 +45,7 @@ impl GameState {
             menu: Menu::Main,
             select: (None,None),
             game: Game::new(),
-            win_dim: (1024,768),
+            win_dim: (1000,1000),
         }
     }
 }
@@ -104,7 +104,7 @@ fn main () {
 fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameState) {
     match gs.menu {
         Menu::Game => {
-            let item_dim = (gs.win_dim.0 as f64/8.2, gs.win_dim.1 as f64/10.0);
+            let item_dim = (gs.win_dim.0 as f64/8.25, gs.win_dim.1 as f64/10.0);
 
             for (i,r) in gs.game.view().iter().enumerate() {
                 *offset += 8;
@@ -185,7 +185,7 @@ fn build_menu_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameStat
     match gs.menu {
         Menu::Main => {
             Button::new()
-                .top_left_of(PaneId)
+                .middle_of(PaneId)
                 .label("New Game")
                 .dimensions(200.0, 60.0)
                 .react(|| {
@@ -195,7 +195,7 @@ fn build_menu_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameStat
                 .set(NewGameId, ui);
             
             Button::new()
-                .right(10.0)
+                .down(10.0)
                 .label("Load Game")
                 .dimensions(200.0, 60.0)
                 .react(|| {

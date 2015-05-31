@@ -349,7 +349,6 @@ impl Game {
                                                                         *n != from &&
                                                                         *n != king);
                                         if !path_res.is_some() { //not blocked
-                                            println!("check{:?}{:?}",path,path_res);
                                             return Some(from); 
                                         }
                                     },
