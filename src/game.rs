@@ -107,14 +107,29 @@ impl Game {
                 //only "to" other player's pieces, or nothing at all? unless castling!
                 if let &Some(oppo) = self.get_player(to) {
                     match mt {
-                        MoveType::Castle => (),
+                        MoveType::Castle => {
+                            match oppo {
+                                Player::White(item) => {
+                                    match item {
+                                        Item::King(true) | Item::Rook(true) => return Err(MoveIllegal::Invalid),
+                                        _ => (),
+                                    }
+                                },
+                                Player::Black(item) => {
+                                    match item {
+                                        Item::King(true) | Item::Rook(true) => return Err(MoveIllegal::Invalid),
+                                        _ => (),
+                                    }
+                                },
+                            }
+                        },
                         _ => {
                             match (player, oppo) {
                                 (Player::White(_),Player::White(_)) | 
                                 (Player::Black(_),Player::Black(_)) => return Err(MoveIllegal::Invalid),
                                 _ => (),
                             }
-                        }
+                        },
                     }
                 }
 
