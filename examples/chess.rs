@@ -18,7 +18,15 @@ use piston::event::*;
 use piston::window::{ WindowSettings, Size };
 use std::path::Path;
 
-const PaneId:usize = 0;
+
+const PaneMain:usize = 0;
+
+const PaneGame:usize = 1;
+const PaneHeader:usize = 2;
+const PaneBoard:usize = 3;
+
+const ItemId:usize = 10;
+
 const NewGameId:usize = 100;
 const LoadGameId:usize = 101;
 const ExitGameId:usize = 102;
@@ -77,14 +85,24 @@ fn main () {
 
         if let Some(args) = event.render_args() {
             gl.draw(args.viewport(), |c, gl| {
-                let mut offset = PaneId+1;
                 
                 // Draw the background.
                 Background::new().rgb(0.2, 0.2, 0.2).draw(ui, gl); //this swaps buffers for us
-                Split::new(PaneId).color(black()).set(ui);
 
-                build_menu_ui(&mut offset,ui, &mut gs);
-                build_board_ui(&mut offset,ui, &mut gs);
+                match gs.menu {
+                    Menu::Main => {
+                        Split::new(PaneMain).color(black()).set(ui);
+                    },
+                    Menu::Game => {
+                        Split::new(PaneGame).flow_down(&[
+                            Split::new(PaneHeader).length(160.0).color(dark_grey()),
+                            Split::new(PaneBoard).color(black()),
+                            ]).set(ui);
+                    }
+                }
+
+                build_menu_ui(ui, &mut gs);
+                build_board_ui(ui, &mut gs);
 
                 if let Some(from) = gs.select.0 {
                     if let Some(to) = gs.select.1 {
@@ -101,20 +119,21 @@ fn main () {
     }
 }
 
-fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameState) {
+fn build_board_ui (ui: &mut Ui<GlyphCache>, gs: &mut GameState) {
+    let mut offset: usize = ItemId;
     match gs.menu {
         Menu::Game => {
             let item_dim = (gs.win_dim.0 as f64/8.25, gs.win_dim.1 as f64/10.0);
 
             for (i,r) in gs.game.view().iter().enumerate() {
-                *offset += 8;
+                offset += 8;
                 for (j,piece) in r.iter().enumerate() {
                     let mut b: Button<_>;
                     if (i == 0) & (j == 0) {
-                        b = Button::new().bottom_left_of(PaneId);
+                        b = Button::new().bottom_left_of(PaneBoard);
                     }
                     else if j == 0 {
-                        let id = *offset-8;
+                        let id = offset-8;
                         b = Button::new().up_from(UiId::Widget(id-j),5.0);
                     }
                     else {
@@ -141,12 +160,12 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
                             },
                             Player::White(item) => {
                                 label = match item {
-                                    Item::Pawn => "\u{2659}",
-                                    Item::Rook(_) => "\u{2656}",
-                                    Item::Knight => "\u{2658}",
-                                    Item::Bishop => "\u{2657}",
-                                    Item::King(_) => "\u{2654}",
-                                    Item::Queen => "\u{2655}",
+                                    Item::Pawn => "\u{265F}",
+                                    Item::Rook(_) => "\u{265C}",
+                                    Item::Knight => "\u{265E}",
+                                    Item::Bishop => "\u{265D}",
+                                    Item::King(_) => "\u{265A}",
+                                    Item::Queen => "\u{265B}",
                                     _ => "",
                                 };
                             },
@@ -198,21 +217,19 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
                                  }
                             }
                         })
-                        .set(*offset+j, ui);
+                        .set(offset+j, ui);
                 }
             }
-
-            *offset += 8;
         },
         _=>(),
     }
 }
 
-fn build_menu_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameState) {
+fn build_menu_ui (ui: &mut Ui<GlyphCache>, gs: &mut GameState) {
     match gs.menu {
         Menu::Main => {
             Button::new()
-                .middle_of(PaneId)
+                .middle_of(PaneMain)
                 .label("New Game")
                 .dimensions(200.0, 60.0)
                 .react(|| {
@@ -231,7 +248,7 @@ fn build_menu_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameStat
         },
         Menu::Game => {
             Button::new()
-                .top_left_of(PaneId)
+                .top_left_of(PaneHeader)
                 .label("Exit Game")
                 .dimensions(200.0, 60.0)
                 .react(|| {
@@ -240,10 +257,10 @@ fn build_menu_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameStat
                 .set(ExitGameId, ui);
 
             let mut label = "White";
-            let mut fontcolor = blue();
+            let mut fontcolor = white();
             match gs.game.get_active() {
                 Player::Black(_) => { label="Black";
-                                      fontcolor = red(); },
+                                      fontcolor = dark_charcoal(); },
                 _ => (),
             }
             Label::new(label)
