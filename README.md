@@ -8,6 +8,10 @@
 - networking (lan/multicast, internet server/client)
 - ai to combat
 
+
+![screenshot](screenshot.png?raw=true)
+
+
 basic example:
 ```rust
 let mut game = Game::new();
@@ -18,3 +22,5 @@ println!("valid move? {:?}",game.play((0,2),(2,0)));
 
 println!("{:?}",game); //prints out current gameboard layout
 ```
+
+extended examples in [tests](tests/lib.rs)

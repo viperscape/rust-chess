@@ -8,7 +8,7 @@ use chess::{Game,Player,Item,AN};
 
 
 use conrod::{Background, Colorable, Theme, Ui, UiId, Positionable, Widget,WidgetId, Button, Labelable,Sizeable};
-use conrod::color::{blue, light_grey, orange, dark_grey, red, white, black, dark_yellow};
+use conrod::color::{rgb_bytes, blue, light_grey, orange, dark_grey, dark_charcoal, red, white, black, light_brown,dark_brown};
 use conrod::{Label, Split, WidgetMatrix, Floating};
 
 use glutin_window::GlutinWindow;
@@ -67,7 +67,7 @@ fn main () {
 
     let event_iter = window.events().ups(180).max_fps(60);
     let mut gl = GlGraphics::new(opengl);
-    let font_path = Path::new("fonts/SourceCodePro-Regular.otf");
+    let font_path = Path::new("fonts/FreeSerif.otf");
     let theme = Theme::default();
     let glyph_cache = GlyphCache::new(&font_path).unwrap();
     let mut ui = &mut Ui::new(glyph_cache, theme);
@@ -124,29 +124,29 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
                     // todo: convert to fmt for player pieces
                     let mut label = "";
                     let mut color = light_grey();
-                    let mut fontcolor = blue();
+                    let mut fontcolor = white();
                     if let Some(player) = *piece {
                         match player {
                             Player::Black(item) => {
                                 label = match item {
-                                    Item::Pawn => "Pawn",
-                                    Item::Rook(_) => "Rook",
-                                    Item::Knight => "Knight",
-                                    Item::Bishop => "Bishop",
-                                    Item::King(_) => "King",
-                                    Item::Queen => "Queen",
+                                    Item::Pawn => "\u{265F}",
+                                    Item::Rook(_) => "\u{265C}",
+                                    Item::Knight => "\u{265E}",
+                                    Item::Bishop => "\u{265D}",
+                                    Item::King(_) => "\u{265A}",
+                                    Item::Queen => "\u{265B}",
                                     _ => "", //en-pass ghost
                                 };
-                                if label != "" { fontcolor = red(); }
+                                if label != "" { fontcolor = dark_charcoal(); }
                             },
                             Player::White(item) => {
                                 label = match item {
-                                    Item::Pawn => "Pawn",
-                                    Item::Rook(_) => "Rook",
-                                    Item::Knight => "Knight",
-                                    Item::Bishop => "Bishop",
-                                    Item::King(_) => "King",
-                                    Item::Queen => "Queen",
+                                    Item::Pawn => "\u{2659}",
+                                    Item::Rook(_) => "\u{2656}",
+                                    Item::Knight => "\u{2658}",
+                                    Item::Bishop => "\u{2657}",
+                                    Item::King(_) => "\u{2654}",
+                                    Item::Queen => "\u{2655}",
                                     _ => "",
                                 };
                             },
@@ -157,23 +157,25 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
                     // checker-color the board
                     if i%2 == 0 {
                         if j%2 == 0 {
-                            color = dark_grey();
+                            color = dark_brown();
                         }
                         else {
-                            color = light_grey();
+                            color = light_brown();
                         }
                     }
                     else {
                         if j%2 == 0 {
-                            color = light_grey();
+                            color = light_brown();
                         }
                         else {
-                            color = dark_grey();
+                            color = dark_brown();
                         }
                     }
 
                     if let Some(ref pos) = gs.select.0 {
-                        if *pos == (i as i8,j as i8) { color = black(); }
+                        if *pos == (i as i8,j as i8) {
+                            color = black();
+                        }
                     }
                     
                     
@@ -181,16 +183,19 @@ fn build_board_ui (offset: &mut usize, ui: &mut Ui<GlyphCache>, gs: &mut GameSta
                         .dimensions(item_dim.0, item_dim.1)
                         .color(color)
                         .label_color(fontcolor)
+                        .label_font_size(96)
                         .react(|| {
                             let pos = (i as i8,j as i8);
-                            let is_piece = gs.game.get_player(pos).is_some();
+                            let piece = gs.game.get_player(pos);
                             let done_select = gs.select.1.is_some();
                             
                             if gs.select.0.is_some() && !done_select {
                                 gs.select.1 = Some(pos);
                             }
-                            else if is_piece && !done_select {
-                                gs.select.0 = Some(pos);
+                            else if piece.is_some() && !done_select {
+                                 if piece.unwrap() ==  gs.game.get_active() {
+                                     gs.select.0 = Some(pos);
+                                 }
                             }
                         })
                         .set(*offset+j, ui);
